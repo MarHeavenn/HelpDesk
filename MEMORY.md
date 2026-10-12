@@ -3,6 +3,7 @@
 ## Estado actual
 
 - Estructura inicial creada. Implementación pendiente.
+- Push inicial hecho: `main` y `develop` publicadas en origin (idénticas). Rama actual: `develop`.
 - Documento general incorporado como fuente (en la raíz del repo).
 - `specs/project.md` y spec de HU-01 actualizados desde el documento general; plan/tasks siguen como esqueletos.
 - Mecanismo de autenticación y contratos mínimos: diferidos por el equipo.

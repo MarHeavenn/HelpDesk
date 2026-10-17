@@ -1,0 +1,6 @@
+# Dependencias del backend (HU-01). Versiones exactas del entorno.
+fastapi==0.143.2
+argon2-cffi==25.1.0
+email-validator==2.3.0
+httpx==0.28.1
+pytest==9.1.1

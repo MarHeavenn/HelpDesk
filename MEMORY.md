@@ -3,7 +3,8 @@
 ## Estado actual
 
 - HU-01 completa y mergeada a `develop` (PR #1, commit 42356dc): T1-T8 en verde.
-- HU-02 (crear y consultar tickets): **T1-T8 en verde** (spec/plan/tasks aprobados). Falta PR/merge a `develop`.
+- HU-02 (crear y consultar tickets): **completa** (T1-T8 en verde, spec/plan/tasks aprobados), commit
+  `a25380c`, rama publicada en `origin`. PR a `develop` pendiente de abrir a mano: no hay `gh` instalado.
 - Suite actual: `pytest backend/tests/` → 183 passed (69 de HU-01 + 114 de HU-02: 19 T1 + 7 T2 + 32 T3 + 5 T4
   + 4 T5 + 14 T6 + 10 T7 + 23 T8). Modulo `tickets` cerrado para esta historia.
 - Modulo `tickets` (`backend/app/modules/tickets/`, capas domain/application/infrastructure/interface): T1
@@ -16,7 +17,7 @@
   Precedencia 401 > 404 y 401 > 422: `get_current_user` se resuelve antes que el handler y que el cuerpo.
 - Modulo `identity` cerrado: registro, login, sesiones en cookie, /me, logout.
 - Hash Argon2id (`argon2-cffi==25.1.0`); email con `email-validator`.
-- Rama actual: `feature/hu-02-tickets` (creada desde `develop` 42356dc).
+- Rama actual: `feature/hu-02-tickets` (desde `develop` 42356dc), con upstream `origin/feature/hu-02-tickets`.
 
 ## Decisiones tomadas (HU-02)
 
@@ -46,7 +47,6 @@
 
 ## Proximos pasos
 
-- HU-02 cerrada: abrir PR de `feature/hu-02-tickets` -> `develop` y mergear.
+- HU-02: abrir a mano el PR `feature/hu-02-tickets` -> `develop` (sin `gh`) y mergear; luego borrar la rama.
 - Siguiente HU del backlog (asignacion/SLA) con su propio spec -> plan -> tasks.
 - Frontend pendiente de runner acordado; backend verificado con TestClient.
-- `origin/feature/hu-01-authentication` sigue en remoto (solo se borro la rama local).

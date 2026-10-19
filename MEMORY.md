@@ -4,9 +4,9 @@
 
 - HU-01 completa y mergeada a `develop` (PR #1, commit 42356dc).
 - HU-02 completa (commit `a25380c`, rama publicada); PR a `develop` pendiente de abrir a mano (no hay `gh`).
-- HU-03 (prioridad y estado): **T1-T10 completas** en `feature/hu-03-priority-status`, sin commit;
-  corrección de revisión R1 aplicada (precedencia con JSON sintácticamente inválido).
-  Spec y plan aprobados; suite completa en verde.
+- HU-03 (prioridad y estado): completa y validada por el reviewer (R1 aplicada: precedencia con JSON
+  sintácticamente inválido; 520 passed); rama `feature/hu-03-priority-status` publicada en `origin`
+  (commit `2c6e7b6`). PR a `develop` pendiente de abrir a mano (no hay `gh`).
 - Suite actual: `pytest backend/tests/` -> **520 passed** (HU-01 + HU-02 revisada + HU-03; 11 del barrido T10).
 - HU-03: catalogos exactos (`PRIORITIES`/`STATUSES`), `Ticket.priority` (`None`), `TicketModification`,
   log append-only, `provision_user`, `set_ticket_priority`/`update_ticket_status`, `get_modifiable_ticket`,
@@ -41,6 +41,8 @@
 
 ## Proximos pasos
 
-- HU-03: commit y PR de `feature/hu-03-priority-status` -> `develop` a mano (el agente no hace commit/push/PR).
+- HU-03: abrir el PR de `feature/hu-03-priority-status` -> `develop` a mano.
 - HU-02: abrir tambien su PR pendiente a `develop`.
-- Siguiente HU del backlog (asignacion HU-04 / SLA HU-05) con su propio spec -> plan -> tasks.
+- Pendiente opcional (no bloqueante): bytes UTF-8 invalidos en el cuerpo de `PUT .../priority|status`
+  devuelven 500 en vez de 422; el usuario decidio dejarlo pendiente.
+- El usuario indico que ya no necesita HU-04 (asignacion) ni HU-05 (SLA).

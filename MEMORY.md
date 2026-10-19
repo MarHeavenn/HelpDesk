@@ -3,7 +3,7 @@
 ## Estado actual
 
 - HU-01 completa y mergeada a `develop` (PR #1, commit 42356dc).
-- HU-02 completa (commit `a25380c`, rama publicada); PR a `develop` pendiente de abrir a mano (no hay `gh`).
+- HU-02 completa y mergeada a `develop` (PR #2, commit `a25380c`; rama `feature/hu-02-tickets` publicada y ya mergeada).
 - HU-03 (prioridad y estado): completa y validada por el reviewer (R1 aplicada: precedencia con JSON
   sintácticamente inválido; 520 passed); rama `feature/hu-03-priority-status` publicada en `origin`
   (commit `2c6e7b6`). PR a `develop` pendiente de abrir a mano (no hay `gh`).
@@ -42,7 +42,6 @@
 ## Proximos pasos
 
 - HU-03: abrir el PR de `feature/hu-03-priority-status` -> `develop` a mano.
-- HU-02: abrir tambien su PR pendiente a `develop`.
 - Pendiente opcional (no bloqueante): bytes UTF-8 invalidos en el cuerpo de `PUT .../priority|status`
   devuelven 500 en vez de 422; el usuario decidio dejarlo pendiente.
 - El usuario indico que ya no necesita HU-04 (asignacion) ni HU-05 (SLA).

@@ -3,8 +3,9 @@
 Verifica:
 - RF-15: el listado responde 200 con **solo** los tickets del usuario
   autenticado, ordenados por `created_at` descendente, con un resumen por
-  ticket de exactamente `{id, title, status, created_at}` (sin
-  `description` ni `requester_id`).
+  ticket de exactamente `{id, title, priority, status, created_at}` (sin
+  `description` ni `requester_id`; `priority` es `null` mientras no se
+  fije, contrato ampliado por HU-03).
 - RF-15: sin tickets devuelve `[]`; los parametros de consulta
   desconocidos (`?status=Abierto&page=2`) se ignoran en silencio (mismo
   resultado y sin error).
@@ -117,9 +118,10 @@ def test_list_returns_only_own_tickets_with_summary_fields():
     assert ids == {first["id"], second["id"]}
     assert ajeno.id not in ids
     for item in items:
-        assert set(item) == {"id", "title", "status", "created_at"}
+        assert set(item) == {"id", "title", "priority", "status", "created_at"}
         assert "description" not in item
         assert "requester_id" not in item
+        assert item["priority"] is None
         assert item["status"] == "Abierto"
 
 

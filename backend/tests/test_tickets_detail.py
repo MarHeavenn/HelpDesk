@@ -2,8 +2,9 @@
 
 Verifica:
 - RF-16: el detalle de un ticket propio responde 200 con **exactamente**
-  `{id, title, description, status, created_at, requester_id}`, con los
-  valores almacenados (titulo y descripcion ya recortados al crear),
+  `{id, title, description, priority, status, created_at, requester_id}`,
+  con los valores almacenados (titulo y descripcion ya recortados al
+  crear), `priority` sin fijar (`null`, contrato ampliado por HU-03),
   `status` igual al valor almacenado (`Abierto`) y `created_at` en ISO
   8601 con offset UTC (`+00:00`, microsegundos).
 - RF-16: la respuesta no expone nombre, correo, rol, contrasena, hash ni
@@ -76,7 +77,7 @@ def _create(title, description):
     return response.json()
 
 
-# --- RF-16: detalle de un ticket propio -> 200 con los seis campos ---
+# --- RF-16: detalle de un ticket propio -> 200 con los siete campos ---
 
 
 def test_detail_of_own_ticket_returns_200_with_full_ticket():
@@ -91,6 +92,7 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
         "id",
         "title",
         "description",
+        "priority",
         "status",
         "created_at",
         "requester_id",
@@ -99,6 +101,7 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
     # Valores almacenados (recortados ya al crear).
     assert body["title"] == "Mi titulo"
     assert body["description"] == "Mi descripcion"
+    assert body["priority"] is None
     assert body["status"] == "Abierto"
     assert body["requester_id"] == user["id"]
     # Misma representacion de created_at que la creacion: ISO 8601 + UTC.

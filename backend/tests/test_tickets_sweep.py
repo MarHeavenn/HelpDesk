@@ -18,7 +18,7 @@ Mapa RF -> test (en este archivo):
 - RF-17 -> test_sweep_not_found_is_unified
 - RF-18 -> test_sweep_no_rejection_uses_400_or_403,
            test_sweep_authentication_precedes_resource_resolution
-- RF-19 -> test_sweep_status_is_immutable
+- RF-19 -> test_sweep_status_stays_open_in_hu02_scope
 - RF-20 -> test_sweep_two_sessions_are_isolated
 - RF-11..RF-20 -> test_sweep_rf_map_covers_all_requirements (trazabilidad)
 
@@ -73,7 +73,7 @@ RF_MAP = {
         "test_sweep_no_rejection_uses_400_or_403"
         " + test_sweep_authentication_precedes_resource_resolution"
     ),
-    "RF-19": "test_sweep_status_is_immutable",
+    "RF-19": "test_sweep_status_stays_open_in_hu02_scope",
     "RF-20": "test_sweep_two_sessions_are_isolated",
 }
 
@@ -81,11 +81,12 @@ DETAIL_FIELDS = {
     "id",
     "title",
     "description",
+    "priority",
     "status",
     "created_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "status", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "created_at"}
 
 
 @pytest.fixture(autouse=True)
@@ -165,6 +166,7 @@ def test_sweep_create_happy_path():
     assert response.status_code == 201
     body = response.json()
     assert set(body) == DETAIL_FIELDS
+    assert body["priority"] is None
     assert body["status"] == OPEN_STATUS == "Abierto"
     assert body["requester_id"] == user["id"]
     assert body["title"] == "Titulo de barrido"
@@ -272,6 +274,7 @@ def test_sweep_list_summary_composition():
     items = response.json()
     assert len(items) == 1
     assert set(items[0]) == SUMMARY_FIELDS
+    assert items[0]["priority"] is None
     # Sobre el cuerpo crudo: ni las claves ni los valores excluidos.
     assert '"description"' not in response.text
     assert "Descripcion de barrido" not in response.text
@@ -343,6 +346,7 @@ def test_sweep_detail_composition_without_personal_data():
     body = response.json()
     assert set(body) == DETAIL_FIELDS
     assert body["description"] == "Descripcion de barrido"
+    assert body["priority"] is None
     assert body["status"] == OPEN_STATUS
     text = response.text
     for forbidden in (
@@ -428,10 +432,10 @@ def test_sweep_authentication_precedes_resource_resolution():
         assert response.status_code not in (400, 403, 404, 422)
 
 
-# --- RF-19: el estado es inmutable durante toda la historia ---
+# --- RF-19: el estado permanece Abierto en el alcance de HU-02 ---
 
 
-def test_sweep_status_is_immutable():
+def test_sweep_status_stays_open_in_hu02_scope():
     _register_and_login()
     created = _create("Titulo", "Descripcion")
 
@@ -446,7 +450,9 @@ def test_sweep_status_is_immutable():
     assert stored is not None
     assert stored.status == OPEN_STATUS == "Abierto"
 
-    # Ninguna operacion de la historia modifica un ticket (solo POST/GET).
+    # Las rutas de HU-02 siguen sin operaciones de modificacion. HU-03
+    # anade la modificacion como subrecursos aparte (/priority y /status),
+    # fuera de estas dos entradas de OpenAPI; aqui no se usan.
     paths = app.openapi()["paths"]
     assert set(paths["/api/tickets"]) == {"get", "post"}
     assert set(paths["/api/tickets/{ticket_id}"]) == {"get"}

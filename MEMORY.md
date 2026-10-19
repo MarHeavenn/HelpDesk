@@ -2,30 +2,29 @@
 
 ## Estado actual
 
-- HU-01 completa y mergeada a `develop` (PR #1, commit 42356dc).
-- HU-02 completa y mergeada a `develop` (PR #2, commit `a25380c`; rama `feature/hu-02-tickets` publicada y ya mergeada).
-- HU-03 (prioridad y estado): completa y validada por el reviewer (R1 aplicada: precedencia con JSON
-  sintácticamente inválido; 520 passed); rama `feature/hu-03-priority-status` publicada en `origin`
-  (commit `2c6e7b6`). PR a `develop` pendiente de abrir a mano (no hay `gh`).
-- Suite actual: `pytest backend/tests/` -> **520 passed** (HU-01 + HU-02 revisada + HU-03; 11 del barrido T10).
-- HU-03: catalogos exactos (`PRIORITIES`/`STATUSES`), `Ticket.priority` (`None`), `TicketModification`,
-  log append-only, `provision_user`, `set_ticket_priority`/`update_ticket_status`, `get_modifiable_ticket`,
-  `PUT /api/tickets/{id}/priority|status`, `priority` en listado/detalle/creacion y barrido RF-21..RF-30.
-- Modulos: `identity` (registro/login/sesion/provision interna, sin endpoint), `tickets` (HU-02 + HU-03),
-  `assignment` y `sla` aun sin implementar. Persistencia en memoria.
+- HU-01 y HU-02 completas y mergeadas a `develop`. HU-03 validada por el reviewer (520 passed);
+  rama `feature/hu-03-priority-status` publicada, PR a `develop` pendiente a mano.
+- HU-04 (asignacion): completa y validada por el reviewer (**APROBADO, 720 passed**); rama
+  `feature/hu-04-assignment` publicada en `origin` (commit `df7a195`; apilada sobre HU-03). PR a
+  `develop` pendiente de abrir a mano y **despues del merge de HU-03**.
+- Suite actual: `pytest backend/tests/` -> **720 passed** (HU-01..HU-04; 10 del barrido T11).
+- Modulos: `identity` (registro/login/sesion/provision y directorio de tecnicos), `tickets`
+  (HU-02 + HU-03 + asignacion), `assignment` y `sla` sin implementar. Persistencia en memoria.
 
-## Decisiones tomadas (HU-03)
+## Decisiones tomadas (HU-04)
 
-- Prioridades `Crítica/Alta/Media/Baja`; estados `Abierto/En progreso/Resuelto/Cerrado`; coincidencia exacta.
-- Prioridad no fijada = `null` (D3); creacion sigue naciendo `Abierto`, sin prioridad y rechaza `priority` con 422.
-- Registro de cambios efectivos aparte (`InMemoryTicketModificationLog`), nunca expuesto ni en respuestas.
-- Repetir el valor vigente -> 200 sin cambio ni registro. `Cerrado` inmutable en HU-03 (409).
-- Precedencia 401 > 404 (permiso uniforme/resolucion) > 409 (cerrado) > 422 (cuerpo/catalogo), resuelta con
-  dependencias antes del cuerpo. Sin 400 ni 403.
-- El cuerpo de `PUT .../priority|status` se lee y valida en una dependencia declarada al final (no como
-  parámetro): con JSON sintácticamente inválido también 401/404/409 preceden al 422 de decodificación.
-- `provision_user` solo roles `tecnico`/`administrador`, reutiliza validaciones/hash/unicidad, sin operacion publica.
-- Sin dependencias nuevas ni control de concurrencia; empates de `changed_at` no fijan orden.
+- Asignacion en `tickets` (D1): `Ticket.assignee_id/assignee_name`, `ASSIGNMENT_ROLES` solo
+  `administrador`, log `InMemoryAssignmentLog` append-only e interno. `assignment` queda para
+  politicas futuras.
+- Tecnico como objeto `assignee: {id, name} | null` en creacion, listado, detalle, asignacion,
+  modificaciones HU-03 y tickets a cargo (D7); nombre proyectado al asignar (D8).
+- `PUT /api/tickets/{id}/assignee` (cuerpo `{"assignee_id": StrictStr}`), `GET /api/technicians`
+  (solo admin) y `GET /api/assignments/mine` (cualquier sesion). Sin desasignacion.
+- Precedencia 401 > 404 > 409 > 422 con dependencia y cuerpo al final, tambien con JSON
+  invalido; tecnico invalido 422 uniforme `assignee is not a valid technician`; cerrado 409
+  `ticket is closed`; sin 400 ni 403.
+- Repetir el tecnico vigente -> 200 sin cambio ni registro; solo cambios efectivos se registran.
+- Reutiliza `provision_user`; sin dependencias nuevas ni concurrencia. Empates de fecha no fijan orden.
 
 ## Errores que se deben evitar
 
@@ -34,14 +33,16 @@
 - No afirmar pruebas no ejecutadas. En PowerShell no existe `tail`: pytest sin tuberias.
 - Barridos: verificar cuerpo crudo (`response.text`/`json.loads`), no solo claves del JSON.
 - Logout 204 devuelve cuerpo vacio (`b""`), no JSON.
-- `Ticket` (dataclass): campos con default (`priority`, `status`) al final.
+- `Ticket` (dataclass): campos con default (`priority`, `status`, `assignee_*`) al final.
 - 422 de Pydantic devuelven `detail` lista; los del dominio, string (aceptado desde HU-01).
-- Un `TestClient` tiene una sola cookie: al iniciar sesion con otro usuario se reemplaza la anterior;
-  para dos sesiones reales usar clientes distintos o iniciar sesion antes de las peticiones de cada rol.
+- Un `TestClient` tiene una sola cookie: usar un cliente por rol cuando coexistan sesiones.
+- Al comparar rutas OpenAPI, `logout` contiene "log": filtrar por ticket/assignment.
 
 ## Proximos pasos
 
-- HU-03: abrir el PR de `feature/hu-03-priority-status` -> `develop` a mano.
-- Pendiente opcional (no bloqueante): bytes UTF-8 invalidos en el cuerpo de `PUT .../priority|status`
-  devuelven 500 en vez de 422; el usuario decidio dejarlo pendiente.
-- El usuario indico que ya no necesita HU-04 (asignacion) ni HU-05 (SLA).
+- Abrir a mano el PR de HU-03 -> `develop` (no hay `gh`).
+- HU-04: abrir su PR a `develop` a mano, despues del merge de HU-03 (rama apilada).
+- Pendiente opcional (no bloqueante): bytes UTF-8 invalidos en cuerpos JSON de HU-03 devuelven 500 en
+  vez de 422; el usuario decidio dejarlo pendiente.
+- Pendiente opcional (no bloqueante): test de dos sesiones de administrador en HU-04.
+- El usuario indico que ya no necesita HU-05 (SLA).

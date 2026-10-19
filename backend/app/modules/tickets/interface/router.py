@@ -10,11 +10,12 @@ Precedencia de rechazos (RF-30): `get_current_user` (401) y la dependencia
 que invoca `get_modifiable_ticket` (404 de permiso/resolucion, 409 de
 ticket cerrado) se resuelven antes que el cuerpo de la peticion, como en
 HU-02 el 401 precede al 422. Para que la precedencia se cumpla tambien con
-JSON sintacticamente invalido, el cuerpo de las modificaciones no se
-declara como parametro (FastAPI lo decodificaria antes de las
-dependencias) sino en una dependencia declarada en ultimo lugar, que lo
-lee y lo valida con los esquemas de `schemas.py` una vez resueltas la
-autenticacion, el permiso, la resolucion y el estado cerrado.
+JSON sintacticamente invalido (o con bytes que no son UTF-8 valido), el
+cuerpo de las modificaciones no se declara como parametro (FastAPI lo
+decodificaria antes de las dependencias) sino en una dependencia declarada
+en ultimo lugar, que lo lee y lo valida con los esquemas de `schemas.py`
+una vez resueltas la autenticacion, el permiso, la resolucion y el estado
+cerrado.
 """
 
 import json
@@ -206,6 +207,29 @@ def _body_error(error: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _json_invalid_error(
+    position: int, message: str, raw: bytes
+) -> RequestValidationError:
+    """422 de cuerpo que no es JSON decodificable.
+
+    Comparte formato entre la sintaxis invalida (`JSONDecodeError`) y los
+    bytes que no son UTF-8 valido (`UnicodeDecodeError`); `position` es el
+    indice donde el decodificador se detuvo.
+    """
+    return _request_validation_error(
+        [
+            {
+                "type": "json_invalid",
+                "loc": ("body", position),
+                "msg": "JSON decode error",
+                "input": {},
+                "ctx": {"error": message},
+            }
+        ],
+        body=raw,
+    )
+
+
 def _json_body(
     schema: type[_SchemaT],
 ) -> Callable[[Request], Coroutine[Any, Any, _SchemaT]]:
@@ -215,7 +239,8 @@ def _json_body(
     `get_current_user` y `_modifiable_ticket`: solo un ticket existente, no
     cerrado y con sesion de gestion llega a decodificar el cuerpo, de modo
     que un JSON sintacticamente invalido no adelanta el 422 al 401/404/409
-    (RF-30). Ausente, invalido o fuera de esquema -> 422, sin cambios.
+    (RF-30). Ausente, invalido (sintaxis o UTF-8) o fuera de esquema -> 422,
+    sin cambios.
     """
 
     async def _read_body(request: Request) -> _SchemaT:
@@ -229,17 +254,14 @@ def _json_body(
         try:
             decoded = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise _request_validation_error(
-                [
-                    {
-                        "type": "json_invalid",
-                        "loc": ("body", exc.pos),
-                        "msg": "JSON decode error",
-                        "input": {},
-                        "ctx": {"error": exc.msg},
-                    }
-                ],
-                body=raw,
+            raise _json_invalid_error(exc.pos, exc.msg, raw) from exc
+        except UnicodeDecodeError as exc:
+            # `json.loads` decodifica los `bytes` como UTF-8: un cuerpo con
+            # bytes invalidos lanza `UnicodeDecodeError` (que no es
+            # `JSONDecodeError`) y escaparia como 500. Se traduce al mismo
+            # 422 de decodificacion, con la posicion del byte invalido.
+            raise _json_invalid_error(
+                exc.start, "Invalid UTF-8", raw
             ) from exc
         if decoded is None:
             raise _request_validation_error([_MISSING_BODY_ERROR], body=None)

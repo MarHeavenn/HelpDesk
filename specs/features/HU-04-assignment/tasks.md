@@ -26,4 +26,5 @@ Estado inicial: todas pendientes (`[ ]`). Tests primero (en rojo), luego el cód
 - [x] **T11. Barrido RF-31 a RF-40 y suite completa.** RF-31, RF-32, RF-33, RF-34, RF-35, RF-36, RF-37, RF-38, RF-39, RF-40
   - Hecho cuando: `.venv\Scripts\python.exe -m pytest backend/tests/` pasa en verde (HU-01, HU-02 revisada, HU-03 revisada y HU-04); `test_tickets_assignment_sweep.py` documenta el mapa RF→test en su cabecera y verifica la composición cruda de las respuestas (con `assignee` `null` y con valor), la tabla de precedencia 401 > 404 > 409 > 422 incluido el JSON sintácticamente inválido, la invisibilidad total del registro de asignaciones, los empates de fecha sin afirmar orden y que ningún rechazo usa 400 ni 403.
 - [x] Extra (post-validación): test de dos sesiones de administrador reasignando el mismo ticket — RF-37
+- Extra (post-validación): endurecimiento de UTF-8 inválido en los PUT (422 en vez de 500) — [x]
 

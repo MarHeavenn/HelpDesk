@@ -7,7 +7,8 @@
 - HU-04 (asignacion): completa y validada por el reviewer (**APROBADO, 720 passed**); rama
   `feature/hu-04-assignment` publicada en `origin` (commit `df7a195`; apilada sobre HU-03). PR a
   `develop` pendiente de abrir a mano y **despues del merge de HU-03**.
-- Suite actual: `pytest backend/tests/` -> **720 passed** (HU-01..HU-04; 10 del barrido T11).
+- Suite actual: `pytest backend/tests/` -> **721 passed** (HU-01..HU-04; 10 del barrido T11;
+  test extra de dos sesiones de administrador en HU-04).
 - Modulos: `identity` (registro/login/sesion/provision y directorio de tecnicos), `tickets`
   (HU-02 + HU-03 + asignacion), `assignment` y `sla` sin implementar. Persistencia en memoria.
 
@@ -44,5 +45,4 @@
 - HU-04: abrir su PR a `develop` a mano, despues del merge de HU-03 (rama apilada).
 - Pendiente opcional (no bloqueante): bytes UTF-8 invalidos en cuerpos JSON de HU-03 devuelven 500 en
   vez de 422; el usuario decidio dejarlo pendiente.
-- Pendiente opcional (no bloqueante): test de dos sesiones de administrador en HU-04.
 - El usuario indico que ya no necesita HU-05 (SLA).

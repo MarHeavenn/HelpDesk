@@ -18,10 +18,11 @@ Mapa RF -> test:
   `test_returned_ticket_does_not_include_the_modification_record`.
 
 La seccion HTTP (T6) verifica `PUT /api/tickets/{ticket_id}/priority` con
-sesiones reales de tecnico y administrador: 200 con el ticket completo,
-cuerpo mono-campo estricto y 422, rol sin permisos / inexistente /
+sesiones reales de tecnico y administrador: 200 con el ticket completo
+(con `assignee: null` mientras no haya asignacion, composicion uniforme de
+HU-04), cuerpo mono-campo estricto y 422, rol sin permisos / inexistente /
 identificador invalido -> 404 uniforme, cerrado -> 409 y sin sesion -> 401
-(RF-22, RF-29.1, RF-29.2, RF-30).
+(RF-22, RF-29.1, RF-29.2, RF-30; RF-35.5 de HU-04).
 """
 
 import os
@@ -69,6 +70,7 @@ DETAIL_FIELDS = {
     "description",
     "priority",
     "status",
+    "assignee",
     "created_at",
     "requester_id",
 }
@@ -350,6 +352,7 @@ def test_put_priority_by_management_role_returns_full_updated_ticket(role):
     assert body["description"] == "Descripcion"
     assert body["priority"] == "Alta"
     assert body["status"] == OPEN_STATUS
+    assert body["assignee"] is None
     assert body["created_at"] == created["created_at"]
     assert body["requester_id"] == requester["id"]
     # El registro no aparece en la respuesta (RF-26).

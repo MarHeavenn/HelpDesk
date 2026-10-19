@@ -44,3 +44,14 @@ class MeResponse(BaseModel):
     id: str
     email: str
     role: str
+
+
+class TechnicianResponse(BaseModel):
+    """Tecnico del directorio (RF-31): solo identificador y nombre.
+
+    Nunca incluye correo, hash, rol ni otros datos de credenciales
+    (RF-35.4).
+    """
+
+    id: str
+    name: str

@@ -2,9 +2,10 @@
 
 Verifica:
 - RF-16: el detalle de un ticket propio responde 200 con **exactamente**
-  `{id, title, description, priority, status, created_at, requester_id}`,
-  con los valores almacenados (titulo y descripcion ya recortados al
-  crear), `priority` sin fijar (`null`, contrato ampliado por HU-03),
+  `{id, title, description, priority, status, assignee, created_at,
+  requester_id}`, con los valores almacenados (titulo y descripcion ya
+  recortados al crear), `priority` sin fijar (`null`, contrato ampliado
+  por HU-03), `assignee` vacio (`null`, contrato ampliado por HU-04),
   `status` igual al valor almacenado (`Abierto`) y `created_at` en ISO
   8601 con offset UTC (`+00:00`, microsegundos).
 - RF-16: la respuesta no expone nombre, correo, rol, contrasena, hash ni
@@ -77,7 +78,7 @@ def _create(title, description):
     return response.json()
 
 
-# --- RF-16: detalle de un ticket propio -> 200 con los siete campos ---
+# --- RF-16: detalle de un ticket propio -> 200 con los ocho campos ---
 
 
 def test_detail_of_own_ticket_returns_200_with_full_ticket():
@@ -94,6 +95,7 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
         "description",
         "priority",
         "status",
+        "assignee",
         "created_at",
         "requester_id",
     }
@@ -103,7 +105,9 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
     assert body["description"] == "Mi descripcion"
     assert body["priority"] is None
     assert body["status"] == "Abierto"
+    assert body["assignee"] is None
     assert body["requester_id"] == user["id"]
+    assert '"assignee":null' in response.text
     # Misma representacion de created_at que la creacion: ISO 8601 + UTC.
     assert body["created_at"] == created["created_at"]
     created_at = datetime.fromisoformat(body["created_at"])
@@ -181,6 +185,7 @@ def test_detail_returns_stored_status_and_created_at():
     body = client.get(f"/api/tickets/{ticket.id}").json()
 
     assert body["status"] == "Abierto"
+    assert body["assignee"] is None
     assert body["created_at"] == instant.isoformat()
     assert body["created_at"] == "2026-10-17T08:30:15.123456+00:00"
     assert body["title"] == "Titulo almacenado"

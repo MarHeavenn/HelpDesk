@@ -42,6 +42,14 @@ class InMemoryUserRepository:
         """Busca por id; None si no existe."""
         return self._by_id.get(user_id)
 
+    def list_all(self) -> list[User]:
+        """Devuelve una copia de todos los usuarios almacenados.
+
+        Lectura para el directorio de tecnicos (RF-31); el orden no se
+        exige.
+        """
+        return list(self._by_id.values())
+
     def count(self) -> int:
         """Numero de usuarios almacenados."""
         return len(self._by_id)

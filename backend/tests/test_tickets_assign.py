@@ -24,7 +24,8 @@ Mapa RF -> test:
   `test_first_assignment_record_keeps_all_assignment_data`,
   `test_default_assigned_at_uses_the_system_time_in_utc`,
   `test_returned_ticket_does_not_include_the_assignment_record`,
-  `test_assignment_does_not_touch_the_hu03_modification_log`.
+  `test_assignment_does_not_touch_the_hu03_modification_log`,
+  `test_http_two_admin_sessions_record_each_actor_on_reassignment`.
 - RF-39.3 (tecnico inexistente, no UUID, cliente o administrador -> 422
   uniforme sin revelar si existe, sin mutar ni registrar):
   `test_nonexistent_technician_is_rejected_without_change_or_record`,
@@ -752,6 +753,56 @@ def test_http_reassignment_returns_the_new_technician_and_records_previous():
         (first.id, second.id),
     ]
     assert [record.actor_id for record in records] == [admin.id, admin.id]
+
+
+def test_http_two_admin_sessions_record_each_actor_on_reassignment():
+    """RF-37: cada sesion real de administrador deja su propio `actor_id`."""
+    admin_a_api, admin_a = _admin_session("admin.a@ejemplo.com", "Admin A")
+    admin_b_api, admin_b = _admin_session("admin.b@ejemplo.com", "Admin B")
+    first = _provision("tecnico", "Ana Torres", "ana@ejemplo.com")
+    second = _provision("tecnico", "Luis Perez", "luis@ejemplo.com")
+    created = _create_ticket(admin_a_api, title="Impresora rota")
+
+    first_response = _put_assignee(
+        created["id"], {"assignee_id": first.id}, target=admin_a_api
+    )
+    second_response = _put_assignee(
+        created["id"], {"assignee_id": second.id}, target=admin_b_api
+    )
+
+    assert first_response.status_code == 200, first_response.text
+    assert second_response.status_code == 200, second_response.text
+    assert first_response.json()["assignee"] == {
+        "id": first.id,
+        "name": first.name,
+    }
+    assert second_response.json()["assignee"] == {
+        "id": second.id,
+        "name": second.name,
+    }
+    stored = _stored(created["id"])
+    assert stored.assignee_id == second.id
+    assert stored.assignee_name == second.name
+
+    records = get_assignment_log().list_by_ticket(created["id"])
+    assert len(records) == 2
+    # Se localizan por actor: los `assigned_at` podrian empatar y el empate
+    # no fija orden entre los registros (RF-37).
+    by_actor = {record.actor_id: record for record in records}
+    assert set(by_actor) == {admin_a.id, admin_b.id}
+
+    first_record = by_actor[admin_a.id]
+    assert first_record.ticket_id == created["id"]
+    assert first_record.previous_assignee_id is None
+    assert first_record.new_assignee_id == first.id
+
+    second_record = by_actor[admin_b.id]
+    assert second_record.ticket_id == created["id"]
+    assert second_record.previous_assignee_id == first.id
+    assert second_record.new_assignee_id == second.id
+
+    # Orden de alta del log (no se ordena por fecha).
+    assert records == [first_record, second_record]
 
 
 def test_http_repeating_the_current_technician_is_200_without_record():

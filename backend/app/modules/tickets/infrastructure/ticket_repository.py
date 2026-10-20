@@ -40,6 +40,18 @@ class InMemoryTicketRepository:
         tickets.sort(key=lambda ticket: ticket.created_at, reverse=True)
         return tickets
 
+    def list_by_assignee(self, assignee_id: str) -> list[Ticket]:
+        """Tickets del tecnico responsable, ordenados por `created_at`
+        descendente (los mas recientes primero). Incluye cualquier estado,
+        tambien `Cerrado` (RF-36); un empate no fija orden."""
+        tickets = [
+            ticket
+            for ticket in self._by_id.values()
+            if ticket.assignee_id == assignee_id
+        ]
+        tickets.sort(key=lambda ticket: ticket.created_at, reverse=True)
+        return tickets
+
     def count(self) -> int:
         """Numero de tickets almacenados."""
         return len(self._by_id)

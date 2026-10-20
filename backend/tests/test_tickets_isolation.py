@@ -1,4 +1,4 @@
-"""T7 — Aislamiento entre usuarios e inmutabilidad del estado. (RF-14, RF-19, RF-20)
+"""T7 — Aislamiento entre usuarios y estado en el alcance de HU-02. (RF-14, RF-19, RF-20)
 
 Verifica de extremo a extremo (por HTTP, sin insertar en el repositorio):
 - RF-20 y RF-14: con **dos usuarios y dos sesiones simultaneas**, el
@@ -8,9 +8,11 @@ Verifica de extremo a extremo (por HTTP, sin insertar en el repositorio):
 - RF-14 y RF-12.4: enviar `requester_id` (y los demas campos reservados)
   en el cuerpo de la creacion da 422 **sin crear ticket** (el repositorio
   no crece).
-- RF-19: tras crear, listar y consultar repetidamente, el `status` de un
-  ticket existente sigue siendo `Abierto`, y ninguna operacion de esta
-  historia lo modifica (el contrato solo define POST/GET).
+- RF-19: en el alcance de HU-02, tras crear, listar y consultar
+  repetidamente, el `status` de un ticket existente sigue siendo
+  `Abierto`: las operaciones de esta historia no lo modifican. HU-03
+  hace el estado modificable para tecnicos y administradores, asi que la
+  inmutabilidad ya no es global; aqui solo se afirma el alcance de HU-02.
 
 El barrido final RF-11 a RF-20 y el mapa RF->test son de T8.
 """
@@ -164,10 +166,10 @@ def test_requester_id_from_body_never_becomes_the_owner():
     assert get_ticket_repository().list_by_requester(user_b["id"]) == []
 
 
-# --- RF-19: inmutabilidad del estado ---
+# --- RF-19: el estado permanece Abierto con las operaciones de HU-02 ---
 
 
-def test_status_stays_open_after_repeated_operations():
+def test_status_stays_open_after_repeated_hu02_operations():
     _register_and_login(client_a, "ana@ejemplo.com")
     created = _create(client_a, "Titulo", "Descripcion")
     assert created["status"] == "Abierto"
@@ -187,10 +189,11 @@ def test_status_stays_open_after_repeated_operations():
     assert client_a.get(f"/api/tickets/{created['id']}").json()["status"] == "Abierto"
 
 
-def test_no_operation_of_the_story_can_change_the_status():
+def test_hu02_paths_keep_only_creation_and_consultation():
     paths = app.openapi()["paths"]
 
-    # El contrato solo define creacion y consulta: no hay operacion que
-    # modifique un ticket (ni, por tanto, su estado).
+    # Las rutas de HU-02 solo definen creacion y consulta. HU-03 anade la
+    # modificacion como subrecursos aparte (/priority y /status), fuera de
+    # estas dos entradas de OpenAPI.
     assert set(paths["/api/tickets"]) == {"get", "post"}
     assert set(paths["/api/tickets/{ticket_id}"]) == {"get"}

@@ -50,6 +50,7 @@ Reglas:
 Siempre:
 
 - Respetar la arquitectura acordada.
+- Abrir los PR contra `develop`; `main` solo recibe versiones estables (nunca abrir un PR contra `main`).
 - Actualizar `MEMORY.md` al terminar cada tarea.
 - Usar CodeGraph (`codegraph_explore` o `codegraph explore`) para entender y explorar el código antes de rastrear archivos con grep/Read.
 - Sincronizar el índice con `codegraph sync` después de cada cambio en el código.

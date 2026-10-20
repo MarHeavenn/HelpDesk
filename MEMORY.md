@@ -2,8 +2,8 @@
 
 ## Estado actual
 
-- HU-01..HU-04 completas. HU-03 (PR #3) y HU-04 (PR #4) se mergearon en `main` desde GitHub;
-  `develop` se sincronizo por fast-forward (mismo codigo) mas un commit de esta memoria.
+- HU-01..HU-04 completas en `develop` (**735 passed**). Los PRs #3 y #4 se mergearon por error
+  en `main`; `main` se rebobino a `ca8eb69` (solo HU-01/HU-02) con force push.
 - HU-03 validada (520 passed); HU-04 validada por el reviewer (**APROBADO, 720 passed**).
 - Extra post-validacion en HU-04 (`ee2b19a`): UTF-8 invalido en los PUT de tickets -> 422
   `json_invalid` (antes 500); regresion en `backend/tests/test_tickets_invalid_utf8.py`.
@@ -42,6 +42,7 @@
 
 ## Proximos pasos
 
-- Trabajar desde `develop`; los PR deben apuntar a `develop`, no a `main` (GitHub sugiere `main`
-  por defecto: cambiar la base a mano).
+- Trabajar siempre desde `develop`; los PR deben apuntar a `develop`, nunca a `main` (GitHub
+  sugiere `main` por defecto: cambiar la base a mano).
+- `main` solo recibe versiones estables con decision explicita; nunca abrir un PR contra `main`.
 - El usuario indico que ya no necesita HU-05 (SLA).

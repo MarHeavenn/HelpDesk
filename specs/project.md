@@ -15,8 +15,8 @@ Aplicación web para gestionar solicitudes de soporte mediante tickets: ciclo de
 ## Módulos funcionales
 
 - `identity`: usuarios y autenticación (soporta HU-01).
-- `tickets`: creación y consulta de tickets (soporta HU-02); núcleo del sistema.
-- `assignment`: asignación de tickets a técnicos (soporta HU-04).
+- `tickets`: creación y consulta de tickets (HU-02), prioridad y estado (HU-03) y asignación de tickets a técnicos (HU-04); núcleo del sistema.
+- `assignment`: políticas futuras de asignación (capacidad, turnos, colas); la asignación de tickets se implementa en `tickets` (D1 de HU-04).
 - `sla`: tiempos de SLA por prioridad y control de cumplimiento (soporta HU-05).
 
 Detalle en las secciones 3.3 y 4 del documento general.
@@ -38,4 +38,6 @@ Detalle en las secciones 3.3 y 4 del documento general.
 
 - HU-01 (registro e inicio de sesión): ver `specs/features/HU-01-authentication/spec.md`.
 - HU-02 (crear y consultar tickets): ver `specs/features/HU-02-tickets/spec.md` (plan y tareas aprobados; T1-T8 en verde).
-- HU-03 a HU-20: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
+- HU-03 (prioridad y estado del ticket): ver `specs/features/HU-03-priority-status/` (implementada y validada; PR a `develop` pendiente).
+- HU-04 (asignar tickets a técnicos): ver `specs/features/HU-04-assignment/` (implementada y validada localmente; PR a `develop` pendiente).
+- HU-05 a HU-20: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

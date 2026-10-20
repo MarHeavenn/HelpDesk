@@ -23,7 +23,7 @@ Mapa RF -> test:
 
 La composicion exacta de los cuerpos se comprueba con igualdad de claves
 (`set(body) == ...`), no solo con pertenencia, para no perder los campos de
-HU-02 al anadir `priority`. Las respuestas crudas se revisan con
+HU-02 ni el `assignee` de HU-04. Las respuestas crudas se revisan con
 `response.text` (token `null`) para no depender solo de `.json()`.
 """
 
@@ -50,13 +50,14 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 )
 
 PASSWORD = "Secreta123"
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
 DETAIL_FIELDS = {
     "id",
     "title",
     "description",
     "priority",
     "status",
+    "assignee",
     "created_at",
     "requester_id",
 }
@@ -138,8 +139,10 @@ def test_creation_returns_priority_null_and_keeps_initial_status():
     assert body["priority"] is None
     assert body["priority"] not in PRIORITIES
     assert body["status"] == OPEN_STATUS
+    assert body["assignee"] is None
     assert body["requester_id"] == user["id"]
     assert '"priority":null' in response.text
+    assert '"assignee":null' in response.text
 
     stored = get_ticket_repository().find_by_id(body["id"])
     assert stored is not None
@@ -183,6 +186,7 @@ def test_list_summary_shows_priority_null_before_it_is_set():
     assert item["priority"] is None
     assert item["priority"] not in PRIORITIES
     assert item["status"] == OPEN_STATUS
+    assert item["assignee"] is None
     assert item["created_at"] == created["created_at"]
     assert '"priority":null' in response.text
 
@@ -202,6 +206,7 @@ def test_detail_shows_priority_null_before_it_is_set():
     assert body["priority"] is None
     assert body["priority"] not in PRIORITIES
     assert body["status"] == OPEN_STATUS
+    assert body["assignee"] is None
     assert body["created_at"] == created["created_at"]
     assert body["requester_id"] == user["id"]
     assert '"priority":null' in response.text
@@ -234,6 +239,7 @@ def test_list_and_detail_show_current_priority_after_it_is_set(priority):
     assert item["title"] == "Titulo"
     assert item["priority"] == priority
     assert item["status"] == OPEN_STATUS
+    assert item["assignee"] is None
     assert item["created_at"] == created["created_at"]
 
     detail_response = client.get(f"/api/tickets/{created['id']}")
@@ -245,6 +251,7 @@ def test_list_and_detail_show_current_priority_after_it_is_set(priority):
     assert detail["description"] == "Descripcion"
     assert detail["priority"] == priority
     assert detail["status"] == OPEN_STATUS
+    assert detail["assignee"] is None
     assert detail["created_at"] == created["created_at"]
     assert detail["requester_id"] == requester["id"]
 
@@ -299,6 +306,7 @@ def test_list_summary_keeps_each_ticket_priority():
     for item in items:
         assert set(item) == SUMMARY_FIELDS
         assert item["status"] == OPEN_STATUS
+        assert item["assignee"] is None
     assert by_id[first["id"]]["priority"] == "Baja"
     assert by_id[first["id"]]["title"] == "Primero"
     assert by_id[second["id"]]["priority"] == "Crítica"

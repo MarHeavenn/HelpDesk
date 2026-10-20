@@ -22,10 +22,11 @@ Mapa RF -> test:
 rechaza antes en `get_modifiable_ticket` (T4). Aqui se verifican todas las
 transiciones desde los estados no cerrados, con cualquier destino.
 La seccion HTTP (T6) verifica `PUT /api/tickets/{ticket_id}/status` con
-sesiones reales de tecnico y administrador: 200 con el ticket completo,
-transiciones libres, cuerpo mono-campo estricto y 422, rol sin permisos /
-inexistente / identificador invalido -> 404 uniforme, cerrado -> 409 y sin
-sesion -> 401 (RF-23, RF-29.1, RF-29.2, RF-30).
+sesiones reales de tecnico y administrador: 200 con el ticket completo
+(con `assignee: null` mientras no haya asignacion, composicion uniforme de
+HU-04), transiciones libres, cuerpo mono-campo estricto y 422, rol sin
+permisos / inexistente / identificador invalido -> 404 uniforme, cerrado ->
+409 y sin sesion -> 401 (RF-23, RF-29.1, RF-29.2, RF-30; RF-35.5 de HU-04).
 """
 
 import os
@@ -73,6 +74,7 @@ DETAIL_FIELDS = {
     "description",
     "priority",
     "status",
+    "assignee",
     "created_at",
     "requester_id",
 }
@@ -368,6 +370,7 @@ def test_put_status_by_management_role_returns_full_updated_ticket(role):
     assert body["description"] == "Descripcion"
     assert body["priority"] is None
     assert body["status"] == "En progreso"
+    assert body["assignee"] is None
     assert body["created_at"] == created["created_at"]
     assert body["requester_id"] == requester["id"]
     assert "previous_value" not in response.text

@@ -11,6 +11,8 @@ Verifica:
   cuerpo), y `title`/`description` se almacenan y devuelven recortados.
 - RF-18: sin sesion valida la creacion responde 401 (la dependencia de
   identidad se resuelve antes del handler).
+- RF-35.5 (HU-04): la creacion usa la composicion del detalle y devuelve
+  el tecnico vacio (`assignee: null`, decision derivada 7).
 
 La matriz completa de validacion de la creacion (422, RF-12) se cubre en
 T3; aqui solo se verifica el camino feliz.
@@ -91,6 +93,7 @@ def test_create_ticket_returns_201_with_ticket_payload():
         "description",
         "priority",
         "status",
+        "assignee",
         "created_at",
         "requester_id",
     }
@@ -98,7 +101,9 @@ def test_create_ticket_returns_201_with_ticket_payload():
     assert body["description"] == "Descripcion de prueba"
     assert body["priority"] is None
     assert body["status"] == "Abierto"
+    assert body["assignee"] is None
     assert body["requester_id"] == user["id"]
+    assert '"assignee":null' in response.text
 
 
 # --- RF-13: identificador UUID opaco y unico ---

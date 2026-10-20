@@ -3,9 +3,10 @@
 Verifica:
 - RF-15: el listado responde 200 con **solo** los tickets del usuario
   autenticado, ordenados por `created_at` descendente, con un resumen por
-  ticket de exactamente `{id, title, priority, status, created_at}` (sin
-  `description` ni `requester_id`; `priority` es `null` mientras no se
-  fije, contrato ampliado por HU-03).
+  ticket de exactamente `{id, title, priority, status, assignee,
+  created_at}` (sin `description` ni `requester_id`; `priority` es `null`
+  mientras no se fije, contrato ampliado por HU-03, y `assignee` es `null`
+  mientras no haya asignacion, contrato ampliado por HU-04).
 - RF-15: sin tickets devuelve `[]`; los parametros de consulta
   desconocidos (`?status=Abierto&page=2`) se ignoran en silencio (mismo
   resultado y sin error).
@@ -118,11 +119,19 @@ def test_list_returns_only_own_tickets_with_summary_fields():
     assert ids == {first["id"], second["id"]}
     assert ajeno.id not in ids
     for item in items:
-        assert set(item) == {"id", "title", "priority", "status", "created_at"}
+        assert set(item) == {
+            "id",
+            "title",
+            "priority",
+            "status",
+            "assignee",
+            "created_at",
+        }
         assert "description" not in item
         assert "requester_id" not in item
         assert item["priority"] is None
         assert item["status"] == "Abierto"
+        assert item["assignee"] is None
 
 
 # --- RF-15: orden por created_at descendente (instantes distintos) ---
@@ -151,6 +160,7 @@ def test_list_is_ordered_by_created_at_descending():
         (base + timedelta(minutes=5)).isoformat(),
         base.isoformat(),
     ]
+    assert all(item["assignee"] is None for item in items)
 
 
 # --- RF-15: parametros de consulta desconocidos ignorados ---

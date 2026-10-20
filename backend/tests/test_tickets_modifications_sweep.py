@@ -4,7 +4,8 @@ Comprueba de extremo a extremo los diez requisitos de la historia con
 sesiones reales (cliente del autorregistro de HU-01 y tecnico/administrador
 creados con `provision_user` y login real), la composicion cruda de las
 respuestas de modificacion (`response.text` y `json.loads`, con `priority`
-`null` y con valor), la tabla completa de precedencia 401 > 404 > 409 >
+`null` y con valor, y `assignee` `null` mientras no haya asignacion), la
+tabla completa de precedencia 401 > 404 > 409 >
 422 (incluido el cuerpo crudo sintacticamente invalido: la autenticacion,
 el permiso, la resolucion y el estado cerrado preceden a su decodificacion),
 los empates de fecha del registro sin afirmar orden y que ningun rechazo
@@ -94,10 +95,11 @@ DETAIL_FIELDS = {
     "description",
     "priority",
     "status",
+    "assignee",
     "created_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
 
 # Mapa RF -> test(s) que lo cubren (contrastado por
 # `test_sweep_rf_map_covers_all_requirements`).
@@ -300,8 +302,11 @@ def test_sweep_modification_raw_composition():
     )
     assert creation.status_code == 201
     created = creation.json()
-    assert set(json.loads(creation.text)) == DETAIL_FIELDS
+    raw_creation = json.loads(creation.text)
+    assert set(raw_creation) == DETAIL_FIELDS
+    assert raw_creation["assignee"] is None
     assert '"priority":null' in creation.text
+    assert '"assignee":null' in creation.text
     _provision_and_login()
 
     # Modificacion de estado antes de fijar prioridad: `priority` va null.
@@ -314,11 +319,13 @@ def test_sweep_modification_raw_composition():
         "description": "Descripcion de barrido",
         "priority": None,
         "status": "En progreso",
+        "assignee": None,
         "created_at": created["created_at"],
         "requester_id": requester["id"],
     }
     assert '"priority":null' in status_change.text
     assert '"status":"En progreso"' in status_change.text
+    assert '"assignee":null' in status_change.text
 
     # Modificacion de prioridad: la respuesta completa lleva el valor vigente.
     priority_change = _put("priority", created["id"], {"priority": "Alta"})
@@ -330,11 +337,13 @@ def test_sweep_modification_raw_composition():
         "description": "Descripcion de barrido",
         "priority": "Alta",
         "status": "En progreso",
+        "assignee": None,
         "created_at": created["created_at"],
         "requester_id": requester["id"],
     }
     assert '"priority":"Alta"' in priority_change.text
     assert '"status":"En progreso"' in priority_change.text
+    assert '"assignee":null' in priority_change.text
 
     # El registro de modificaciones no aparece en ningun cuerpo crudo.
     for response in (status_change, priority_change):
@@ -547,8 +556,11 @@ def test_sweep_queries_show_current_values_raw():
     created = creation.json()
     second = _create_ticket(client, "Sin prioridad", "Otra descripcion")
 
-    assert set(json.loads(creation.text)) == DETAIL_FIELDS
+    raw_creation = json.loads(creation.text)
+    assert set(raw_creation) == DETAIL_FIELDS
+    assert raw_creation["assignee"] is None
     assert '"priority":null' in creation.text
+    assert '"assignee":null' in creation.text
     assert creation.json()["status"] == OPEN_STATUS
 
     # La creacion sigue rechazando `priority` con 422 (RF-27.3).
@@ -575,11 +587,13 @@ def test_sweep_queries_show_current_values_raw():
     by_id = {item["id"]: item for item in items}
     for item in items:
         assert set(item) == SUMMARY_FIELDS
+        assert item["assignee"] is None
     assert by_id[created["id"]]["priority"] == "Media"
     assert by_id[created["id"]]["status"] == "Resuelto"
     assert by_id[second["id"]]["priority"] is None
     assert '"priority":"Media"' in listing.text
     assert '"priority":null' in listing.text
+    assert '"assignee":null' in listing.text
     assert '"description"' not in listing.text
     assert '"requester_id"' not in listing.text
 
@@ -589,6 +603,7 @@ def test_sweep_queries_show_current_values_raw():
     assert set(raw_detail) == DETAIL_FIELDS
     assert raw_detail["priority"] == "Media"
     assert raw_detail["status"] == "Resuelto"
+    assert raw_detail["assignee"] is None
     assert raw_detail["requester_id"] == requester["id"]
     assert '"priority":"Media"' in detail.text
 

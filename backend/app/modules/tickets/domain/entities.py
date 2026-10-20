@@ -1,10 +1,13 @@
-"""Entidades y reglas de dominio del modulo tickets (HU-02 y HU-03).
+"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03 y HU-04).
 
 Cubre RF-12 (validacion de titulo y descripcion), RF-13 (identificador
-opaco con formato UUID) y RF-19 (estado inicial `Abierto`) de HU-02, y de
+opaco con formato UUID) y RF-19 (estado inicial `Abierto`) de HU-02, de
 HU-03: RF-21 (catalogos de prioridades y estados), RF-27.2/RF-27.3
 (`priority` del ticket, vacia mientras no se fije) y RF-26 (entidad
-`TicketModification` del registro de modificaciones).
+`TicketModification` del registro de modificaciones), y de HU-04:
+RF-34/RF-35.3 (tecnico responsable del ticket, vacio mientras no se
+asigne), RF-37 (entidad `AssignmentRecord` del registro de asignaciones)
+y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion).
 
 Reglas:
 - Titulo: obligatorio, tipo cadena de texto, 1-200 code points tras el
@@ -27,6 +30,20 @@ Reglas:
   la capa de aplicacion, no en la interfaz.
 - Registro (RF-26): `TicketModification` es de solo datos; quien decide
   cuando se registra es el caso de uso (solo cambios efectivos).
+- Tecnico responsable (HU-04): `assignee_id` es el identificador opaco
+  del tecnico y `assignee_name` la proyeccion de su nombre en el momento
+  de asignar (D8); ambos nacen vacios (`None`) y permanecen asi mientras
+  el ticket no se asigne (RF-34). Sin asignacion los dos son `None`,
+  representacion inequivocamente distinguible de cualquier tecnico
+  registrado (RF-35.3); el ticket se compone leyendo el propio ticket,
+  sin consultar `identity`.
+- Roles de asignacion (RF-38): `ASSIGNMENT_ROLES` fija que solo
+  `administrador` puede asignar y reasignar; los roles de gestion de
+  prioridad y estado no cambian.
+- Registro de asignaciones (RF-37): `AssignmentRecord` es de solo datos
+  (ticket, tecnico anterior —vacio en la primera asignacion—, tecnico
+  nuevo, usuario que asigna y fecha y hora); quien decide cuando se
+  registra es el caso de uso (solo cambios efectivos).
 """
 
 import uuid
@@ -50,6 +67,10 @@ STATUS_FIELD = "status"
 
 # Roles con permisos de gestion sobre prioridad y estado (RF-24).
 MANAGEMENT_ROLES = frozenset({"tecnico", "administrador"})
+
+# Roles con permiso de asignacion y reasignacion (RF-38): solo el
+# administrador; los tecnicos no asignan.
+ASSIGNMENT_ROLES = frozenset({"administrador"})
 
 
 def _validate_text(raw: object, *, field: str, min_length: int, max_length: int) -> str:
@@ -135,8 +156,10 @@ class Ticket:
     `id` es un UUID opaco, `requester_id` el identificador opaco del
     usuario autenticado que lo creo (contrato de `identity`, sin datos
     personales) y `status` nace en `OPEN_STATUS`. `priority` nace vacia
-    (`None`) mientras no se fije (RF-27.2); los campos con valor por
-    defecto van al final.
+    (`None`) mientras no se fije (RF-27.2) y el tecnico responsable
+    (`assignee_id`/`assignee_name`) nace vacio mientras el ticket no se
+    asigne (RF-34); los campos con valor por defecto van al final. Sin
+    asignacion ambos campos del tecnico son `None` (RF-35.3).
     """
 
     id: str
@@ -146,6 +169,8 @@ class Ticket:
     created_at: datetime
     priority: str | None = None
     status: str = OPEN_STATUS
+    assignee_id: str | None = None
+    assignee_name: str | None = None
 
 
 @dataclass
@@ -167,3 +192,25 @@ class TicketModification:
     new_value: str
     actor_id: str
     changed_at: datetime
+
+
+@dataclass
+class AssignmentRecord:
+    """Registro de una asignacion o reasignacion efectiva (RF-37).
+
+    `previous_assignee_id` es `None` en la primera asignacion y el tecnico
+    vigente en una reasignacion; `new_assignee_id` el tecnico fijado;
+    `actor_id` el identificador opaco del usuario que asigna, obtenido de
+    la sesion autenticada (nunca del cuerpo de la peticion); `assigned_at`
+    la fecha y hora UTC generada por el sistema. Los empates de
+    `assigned_at` no fijan orden entre registros. La entidad es de solo
+    datos: el alta del registro corresponde al caso de uso, y solo se
+    registran cambios efectivos. Es independiente del estado del ticket y
+    no sustituye al registro de modificaciones de HU-03.
+    """
+
+    ticket_id: str
+    previous_assignee_id: str | None
+    new_assignee_id: str
+    actor_id: str
+    assigned_at: datetime

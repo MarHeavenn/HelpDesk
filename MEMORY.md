@@ -2,16 +2,13 @@
 
 ## Estado actual
 
-- HU-01 y HU-02 completas y mergeadas a `develop`. HU-03 validada por el reviewer (520 passed);
-  rama `feature/hu-03-priority-status` publicada, PR a `develop` pendiente a mano.
-- HU-04 (asignacion): completa y validada por el reviewer (**APROBADO, 720 passed**); rama
-  `feature/hu-04-assignment` publicada en `origin` (HEAD `c121d7d`; apilada sobre HU-03). PR a
-  `develop` pendiente de abrir a mano y **despues del merge de HU-03**.
-- Extra post-validacion en `feature/hu-04-assignment` (commit `ee2b19a`): bytes UTF-8
-  invalidos en los PUT de tickets -> 422 `json_invalid` con posicion del byte y `Invalid UTF-8`
-  (antes 500); regresion en `backend/tests/test_tickets_invalid_utf8.py`.
-- Suite actual: `pytest backend/tests/` -> **735 passed** (HU-01..HU-04; 10 del barrido T11;
-  test extra de dos sesiones de administrador y 14 de regresion UTF-8 en HU-04).
+- HU-01..HU-04 completas. HU-03 (PR #3) y HU-04 (PR #4) se mergearon en `main` desde GitHub;
+  `develop` se sincronizo por fast-forward (mismo codigo) mas un commit de esta memoria.
+- HU-03 validada (520 passed); HU-04 validada por el reviewer (**APROBADO, 720 passed**).
+- Extra post-validacion en HU-04 (`ee2b19a`): UTF-8 invalido en los PUT de tickets -> 422
+  `json_invalid` (antes 500); regresion en `backend/tests/test_tickets_invalid_utf8.py`.
+- Suite: `pytest backend/tests/` -> **735 passed** (HU-01..HU-04; 10 del barrido T11; test extra
+  de dos sesiones de administrador y 14 de regresion UTF-8).
 - Modulos: `identity` (registro/login/sesion/provision y directorio de tecnicos), `tickets`
   (HU-02 + HU-03 + asignacion), `assignment` y `sla` sin implementar. Persistencia en memoria.
 
@@ -45,6 +42,6 @@
 
 ## Proximos pasos
 
-- Abrir a mano el PR de HU-03 -> `develop` (no hay `gh`).
-- HU-04: abrir su PR a `develop` a mano, despues del merge de HU-03 (rama apilada).
+- Trabajar desde `develop`; los PR deben apuntar a `develop`, no a `main` (GitHub sugiere `main`
+  por defecto: cambiar la base a mano).
 - El usuario indico que ya no necesita HU-05 (SLA).

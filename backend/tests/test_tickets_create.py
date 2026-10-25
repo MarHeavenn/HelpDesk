@@ -2,14 +2,17 @@
 
 Verifica:
 - RF-11: con sesion valida, crear un ticket con titulo y descripcion
-  validos responde 201 con el ticket creado, estado `Abierto` y la fecha
-  y hora de creacion sellada por el sistema (no fijable por el cliente).
+  validos responde 201 con el ticket creado, estado `Abierto`, prioridad
+  sin fijar (`priority: null`, contrato ampliado por HU-03) y la fecha y
+  hora de creacion sellada por el sistema (no fijable por el cliente).
 - RF-13: el identificador devuelto es un UUID opaco y dos creaciones dan
   identificadores distintos.
 - RF-14: `requester_id` es el `id` de la sesion (nunca un valor del
   cuerpo), y `title`/`description` se almacenan y devuelven recortados.
 - RF-18: sin sesion valida la creacion responde 401 (la dependencia de
   identidad se resuelve antes del handler).
+- RF-35.5 (HU-04): la creacion usa la composicion del detalle y devuelve
+  el tecnico vacio (`assignee: null`, decision derivada 7).
 
 La matriz completa de validacion de la creacion (422, RF-12) se cubre en
 T3; aqui solo se verifica el camino feliz.
@@ -88,14 +91,19 @@ def test_create_ticket_returns_201_with_ticket_payload():
         "id",
         "title",
         "description",
+        "priority",
         "status",
+        "assignee",
         "created_at",
         "requester_id",
     }
     assert body["title"] == "Titulo de prueba"
     assert body["description"] == "Descripcion de prueba"
+    assert body["priority"] is None
     assert body["status"] == "Abierto"
+    assert body["assignee"] is None
     assert body["requester_id"] == user["id"]
+    assert '"assignee":null' in response.text
 
 
 # --- RF-13: identificador UUID opaco y unico ---

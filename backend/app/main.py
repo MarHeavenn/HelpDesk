@@ -6,6 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.modules.identity.interface.router import router as auth_router
+from app.modules.identity.interface.technicians_router import (
+    router as technicians_router,
+)
+from app.modules.tickets.interface.assignments_router import (
+    router as assignments_router,
+)
 from app.modules.tickets.interface.router import router as tickets_router
 
 # Origenes explicitos del frontend (sin comodin "*" con credenciales:
@@ -32,7 +38,9 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(technicians_router)
 app.include_router(tickets_router)
+app.include_router(assignments_router)
 
 
 @app.get("/health")

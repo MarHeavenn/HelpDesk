@@ -38,6 +38,6 @@ Detalle en las secciones 3.3 y 4 del documento general.
 
 - HU-01 (registro e inicio de sesión): ver `specs/features/HU-01-authentication/spec.md`.
 - HU-02 (crear y consultar tickets): ver `specs/features/HU-02-tickets/spec.md` (plan y tareas aprobados; T1-T8 en verde).
-- HU-03 (prioridad y estado del ticket): ver `specs/features/HU-03-priority-status/` (implementada y validada en `develop`).
-- HU-04 (asignar tickets a técnicos): ver `specs/features/HU-04-assignment/` (implementada y validada en `develop`).
+- HU-03 (prioridad y estado del ticket): ver `specs/features/HU-03-priority-status/` (implementada y validada; PR a `develop` pendiente).
+- HU-04 (asignar tickets a técnicos): ver `specs/features/HU-04-assignment/` (implementada y validada localmente; PR a `develop` pendiente).
 - HU-05 a HU-20: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

@@ -5,14 +5,15 @@
 - HU-01..HU-04 completas en `develop`. Suite completa: **746 passed, 3 failed**.
   Los 3 fallos son previos a TSK-025: precedencia 401/404 con cookie invalida
   (dependencias actuales de `starlette`/`httpx`); no tocan la base de datos.
-- `feature/localhost-setup` mergeada (PR #7). Rama actual `feature/DataBase`,
-  creada desde `develop`: TSK-025 (PostgreSQL multitenant) implementada.
+- `feature/localhost-setup` mergeada (PR #7). `feature/DataBase` mergeada (PR #9):
+  TSK-025 (PostgreSQL multitenant) implementada.
 - TSK-025: 8 tablas, migraciones SQL idempotentes, capa de conexion y 14 tests
   de integracion en verde. PostgreSQL 16 en Docker, volumen `infra_pgdata`,
   puerto host **55432** porque el 5432 lo ocupa un PostgreSQL nativo.
 - Modulos: `identity`, `tickets` (HU-02..HU-04) con persistencia en memoria;
-  `assignment` y `sla` sin implementar. Frontend vacio. Los casos de uso aun
-  no usan PostgreSQL (integracion pendiente, tarea aparte).
+  `assignment` y `sla` sin implementar. Frontend HU-20 con spec/plan/tareas,
+  aun sin codigo. Los casos de uso aun no usan PostgreSQL (integracion
+  pendiente, tarea aparte).
 
 ## Decisiones TSK-025
 
@@ -49,7 +50,9 @@
 
 ## Proximos pasos
 
-- PR de `feature/DataBase` contra `develop` (nunca contra `main`).
 - Integrar los modulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos por dependencias actuales.
-- Frontend pendiente; HU-05 (SLA) descartada por el usuario.
+- Frontend HU-20: spec aprobada (híbrido: API real donde existe + mock «Demo»
+  donde falta); plan y tareas en `specs/features/HU-20-frontend/`; siguiente: T1 (scaffold).
+- HU-05 (SLA) descartada por el usuario.
+- PRs siempre contra `develop`; `main` solo recibe versiones estables.

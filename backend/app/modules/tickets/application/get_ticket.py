@@ -1,15 +1,21 @@
-"""Caso de uso de detalle de un ticket propio (RF-16, RF-17).
+"""Casos de uso de detalle de un ticket (HU-02 y HU-06).
 
-El control de propiedad vive aqui, en la logica de negocio (no en la
-interfaz): solo se devuelve el ticket si su solicitante es el usuario
-autenticado. Un ticket inexistente o ajeno se trata como no encontrado
-para no revelar la existencia de tickets de otros usuarios.
+`get_my_ticket` implementa RF-16 y RF-17 de HU-02: control de propiedad para
+el rol cliente, sin revelar la existencia de tickets ajenos.
+
+`get_ticket_detail` implementa HU-06 (RF-51, RF-52, RF-56): mantiene la
+regla del cliente y permite a los roles de gestion (`tecnico` y
+`administrador`) consultar el detalle de cualquier ticket existente.
 
 La traduccion de `TicketNotFoundError` a un codigo HTTP corresponde a la
-capa de comunicacion (RF-17 -> 404, cableado en T6).
+capa de comunicacion (404).
 """
 
-from app.modules.tickets.domain.entities import Ticket, is_valid_uuid_format
+from app.modules.tickets.domain.entities import (
+    MANAGEMENT_ROLES,
+    Ticket,
+    is_valid_uuid_format,
+)
 from app.modules.tickets.infrastructure.ticket_repository import (
     InMemoryTicketRepository,
 )
@@ -21,7 +27,7 @@ TICKET_NOT_FOUND_MESSAGE = "ticket not found"
 
 
 class TicketNotFoundError(ValueError):
-    """El ticket no existe o no pertenece al solicitante (-> 404, RF-17)."""
+    """El ticket no existe o el actor no puede consultarlo (-> 404)."""
 
 
 def get_my_ticket(
@@ -40,5 +46,29 @@ def get_my_ticket(
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     ticket = tickets.find_by_id(ticket_id)
     if ticket is None or ticket.requester_id != requester_id:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    return ticket
+
+
+def get_ticket_detail(
+    ticket_id: str,
+    actor_id: str,
+    actor_role: str,
+    tickets: InMemoryTicketRepository,
+) -> Ticket:
+    """Devuelve el ticket visible para el actor (HU-06, RF-51, RF-52).
+
+    Un rol de gestion (`tecnico` o `administrador`) ve cualquier ticket
+    existente, asignado o no. Un cliente solo ve los que creo, con el
+    mismo 404 uniforme de HU-02. El formato del identificador y la
+    existencia del ticket se validan antes de decidir el permiso; el 404
+    es identico en todos los rechazos (RF-56).
+    """
+    if not is_valid_uuid_format(ticket_id):
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    ticket = tickets.find_by_id(ticket_id)
+    if ticket is None:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    if actor_role not in MANAGEMENT_ROLES and ticket.requester_id != actor_id:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     return ticket

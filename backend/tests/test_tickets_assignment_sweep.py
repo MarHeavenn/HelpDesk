@@ -92,8 +92,10 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
     "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
 SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}

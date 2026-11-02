@@ -75,8 +75,10 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
     "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
 MODIFIABLE_SOURCE_STATUSES = [value for value in STATUSES if value != "Cerrado"]

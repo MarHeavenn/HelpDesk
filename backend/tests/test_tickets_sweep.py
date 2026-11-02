@@ -85,10 +85,11 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "sla",
     "created_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 
 
 @pytest.fixture(autouse=True)

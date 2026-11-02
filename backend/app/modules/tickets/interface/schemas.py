@@ -58,12 +58,32 @@ class AssigneeResponse(BaseModel):
     name: str
 
 
+class SlaResponse(BaseModel):
+    """SLA calculado de un ticket (HU-05, RF-44).
+
+    Se anula cuando el ticket no tiene prioridad (RF-42). Los tiempos van
+    en minutos enteros y las fechas en ISO 8601 con offset UTC, igual que
+    `created_at`. `near_due` y `breached` son los indicadores de SLA
+    proximo a vencer e incumplido (RF-45.4).
+    """
+
+    target_minutes: int
+    started_at: str
+    due_at: str
+    elapsed_minutes: int
+    remaining_minutes: int
+    status: str
+    near_due: bool
+    breached: bool
+
+
 class TicketResponse(BaseModel):
     """Ticket completo devuelto por creacion, detalle y modificacion.
 
     `priority` es `None` mientras no se fije (RF-27.2). `assignee` es
-    `None` mientras el ticket no tenga responsable (RF-35.3). `created_at`
-    se serializa en ISO 8601/RFC 3339 con offset UTC y microsegundos
+    `None` mientras el ticket no tenga responsable (RF-35.3). `sla` es
+    `None` mientras no haya prioridad (HU-05, RF-42). `created_at` se
+    serializa en ISO 8601/RFC 3339 con offset UTC y microsegundos
     (contrato de la planificacion, D6).
     """
 
@@ -73,6 +93,7 @@ class TicketResponse(BaseModel):
     priority: str | None
     status: str
     assignee: AssigneeResponse | None
+    sla: SlaResponse | None
     created_at: str
     requester_id: str
 
@@ -80,8 +101,9 @@ class TicketResponse(BaseModel):
 class TicketSummaryResponse(BaseModel):
     """Resumen de un ticket para el listado (RF-15, RF-27.2, RF-35.1).
 
-    Exactamente `{id, title, priority, status, assignee, created_at}`: no
-    incluye la descripcion ni el identificador del solicitante.
+    Exactamente `{id, title, priority, status, assignee, sla, created_at}`:
+    no incluye la descripcion ni el identificador del solicitante. `sla`
+    es `None` mientras el ticket no tenga prioridad (HU-05, RF-42).
     """
 
     id: str
@@ -89,5 +111,6 @@ class TicketSummaryResponse(BaseModel):
     priority: str | None
     status: str
     assignee: AssigneeResponse | None
+    sla: SlaResponse | None
     created_at: str
 

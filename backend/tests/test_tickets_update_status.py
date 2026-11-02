@@ -75,6 +75,7 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "sla",
     "created_at",
     "requester_id",
 }

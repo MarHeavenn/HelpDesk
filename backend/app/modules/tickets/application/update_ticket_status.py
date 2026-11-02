@@ -14,12 +14,17 @@ Reglas:
 - Cambio efectivo -> muta `Ticket.status` y anade un registro con el
   responsable de la sesion, la fecha/hora del sistema y los valores
   anterior y nuevo (RF-26).
+- Resolucion (HU-05, RF-46): al pasar a `Resuelto` o `Cerrado` se fija
+  `resolved_at` con el mismo instante del registro; al volver a un estado
+  no resuelto se descarta. `Resuelto` -> `Cerrado` conserva el instante
+  original. Un cambio al mismo estado no toca `resolved_at`.
 """
 
 from datetime import datetime, timezone
 
 from app.modules.tickets.application.create_ticket import TicketValidationError
 from app.modules.tickets.domain.entities import (
+    RESOLVED_STATUSES,
     STATUS_FIELD,
     Ticket,
     TicketModification,
@@ -57,8 +62,17 @@ def update_ticket_status(
     if ticket.status == new_status:
         return ticket
 
+    changed_at = now if now is not None else datetime.now(timezone.utc)
     previous_status = ticket.status
     ticket.status = new_status
+    if new_status in RESOLVED_STATUSES:
+        # `Resuelto` -> `Cerrado` conserva la resolucion original; el
+        # primer paso a un estado resuelto fija el instante (RF-46).
+        if ticket.resolved_at is None:
+            ticket.resolved_at = changed_at
+    else:
+        # Reapertura: el SLA vuelve a evolucionar desde la creacion.
+        ticket.resolved_at = None
     modifications.add(
         TicketModification(
             ticket_id=ticket.id,
@@ -66,7 +80,7 @@ def update_ticket_status(
             previous_value=previous_status,
             new_value=new_status,
             actor_id=actor_id,
-            changed_at=now if now is not None else datetime.now(timezone.utc),
+            changed_at=changed_at,
         )
     )
     return ticket

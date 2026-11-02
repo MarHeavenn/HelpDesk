@@ -2,57 +2,69 @@
 
 ## Estado actual
 
-- HU-01..HU-04 completas en `develop`. Suite completa: **746 passed, 3 failed**.
-  Los 3 fallos son previos a TSK-025: precedencia 401/404 con cookie invalida
-  (dependencias actuales de `starlette`/`httpx`); no tocan la base de datos.
-- `feature/localhost-setup` mergeada (PR #7). `feature/DataBase` mergeada (PR #9):
-  TSK-025 (PostgreSQL multitenant) implementada.
-- TSK-025: 8 tablas, migraciones SQL idempotentes, capa de conexion y 14 tests
-  de integracion en verde. PostgreSQL 16 en Docker, volumen `infra_pgdata`,
-  puerto host **55432** porque el 5432 lo ocupa un PostgreSQL nativo.
-- Modulos: `identity`, `tickets` (HU-02..HU-04) con persistencia en memoria;
-  `assignment` y `sla` sin implementar. Frontend HU-20 con spec/plan/tareas,
-  aun sin codigo. Los casos de uso aun no usan PostgreSQL (integracion
-  pendiente, tarea aparte).
+- HU-01..HU-04 completas en `develop`. Suite completa con `DATABASE_URL`:
+  **797 passed, 3 failed** (los 3 fallos son previos: precedencia 401/404 con
+  cookie invalida por `starlette`/`httpx`).
+- TSK-025 (PostgreSQL multitenant) mergeada (PR #9). Los modulos siguen con
+  persistencia en memoria; integrarlos con PostgreSQL es una tarea aparte.
+- HU-05 (SLA por prioridad) **implementada** en `feature/SLA-por-prioridad`
+  (cambios sin commit): spec, plan y `tasks.md` en `specs/features/HU-05-sla/`
+  (tareas redactadas a posteriori, todas cerradas).
+- HU-20 (frontend) con spec/plan/tareas, sin codigo. HU-06..HU-19 definidas
+  solo en el documento general.
+
+## Decisiones HU-05
+
+- Valores iniciales: Critica 120, Alta 240, Media 720, Baja 1440 min, en
+  `sla/application/policies.py`. Config global en memoria; API/UI -> HU-14.
+- Ticket sin prioridad: `sla: null`. Al fijar prioridad vence desde `created_at`.
+- Umbral proximo a vencer: <= 20 % del objetivo restante (y > 0).
+- `sla` va dentro de todas las respuestas de ticket (misma composicion).
+- Al pasar a `Resuelto`/`Cerrado` se fija `Ticket.resolved_at` y el SLA se
+  congela (`cumplido`/`incumplido`); al reabrir se descarta y se reanuda.
+- Estados: `en_tiempo`, `en_riesgo`, `cumplido`, `incumplido`; indicadores
+  `near_due` y `breached`.
+- Calculo puro en `sla/domain`; `tickets.interface` lo compone via
+  `sla/interface/contract.py`. `sla` nunca importa `tickets` (sin ciclo).
+- Los listados usan un unico `now` por respuesta.
+- No existe ruta publica de configuracion (`GET/PUT /api/sla/policies` -> 404).
 
 ## Decisiones TSK-025
 
 - Una BD y un esquema para todas las empresas; `company_id` en `users`,
-  `tickets` y `sla_policies`. `ticket_sla` y `ticket_comments` heredan la
-  empresa via `ticket_id`.
-- FK compuestas `(company_id, requester_id/assignee_id) -> users(company_id,id)`:
-  la BD impide mezclar empresas en creador o tecnico.
-- Trigger al crear empresa: SLA 2h/4h/12h/24h (120/240/720/1440 min).
-- Trigger en comentarios: autor y ticket de la misma empresa.
-- Email unico global (el login actual no conoce la empresa). Roles:
-  `cliente`, `tecnico`, `administrador`.
+  `tickets` y `sla_policies`; `ticket_sla` y `ticket_comments` lo heredan.
+- FK compuestas `(company_id, requester_id/assignee_id) -> users(company_id,id)`.
+- Trigger al crear empresa: SLA 120/240/720/1440 min.
+- Email unico global; roles `cliente`, `tecnico`, `administrador`.
 - Migraciones SQL propias (`migrations/run.py` + `schema_migrations`), sin ORM.
-  Driver `psycopg[binary]==3.3.6`. `company_id` siempre sale de la sesion.
 
 ## Entorno local
 
 - `.venv` en `backend/`; instalar `backend/requirements.txt`.
-- `infra/.env` (ignorado por git) con `POSTGRES_PORT=55432`.
-- Aplicar migraciones: `backend\.venv\Scripts\python.exe backend\migrations\run.py`
-  con `DATABASE_URL=postgresql://helpdesk:helpdesk_dev@127.0.0.1:55432/helpdesk`.
-- Tests de BD: mismo `DATABASE_URL`; se saltan si no hay PostgreSQL.
+- `infra/.env` (ignorado por git) con `POSTGRES_PORT=55432`; el 5432 lo ocupa
+  un PostgreSQL nativo. Arrancar Docker Desktop y `docker compose up -d` en
+  `infra/` antes de los tests de BD.
+- `DATABASE_URL=postgresql://helpdesk:helpdesk_dev@127.0.0.1:55432/helpdesk`
+  para migraciones y tests de BD; sin el, esos 14 tests se saltan.
 
 ## Errores que se deben evitar
 
-- No usar el puerto 5432 en esta maquina: hay un PostgreSQL nativo y las
-  conexiones no llegan al contenedor de Docker.
+- No usar el puerto 5432 en esta maquina.
 - No afirmar pruebas no ejecutadas. En PowerShell no existe `tail`.
+- `codegraph` solo corre via `cmd /c` (la politica de scripts bloquea el .ps1).
 - No poner logica de negocio en los HTTP ni tocar tablas de otros modulos.
 - Logout 204 devuelve cuerpo vacio (`b""`), no JSON.
 - `Ticket` (dataclass): campos con default al final.
 - 422 de Pydantic devuelven `detail` lista; los del dominio, string.
 - Un `TestClient` tiene una sola cookie: usar un cliente por rol.
+- Al cambiar el contrato de ticket hay que ajustar los tests que comparan el
+  conjunto exacto de campos; los tests de API envejecen el ticket mutando
+  `created_at` para no dormir.
 
 ## Proximos pasos
 
+- Commit/PR de HU-05 contra `develop`.
+- HU-14: configuracion publica de SLA (API/UI).
 - Integrar los modulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos por dependencias actuales.
-- Frontend HU-20: spec aprobada (híbrido: API real donde existe + mock «Demo»
-  donde falta); plan y tareas en `specs/features/HU-20-frontend/`; siguiente: T1 (scaffold).
-- HU-05 (SLA) descartada por el usuario.
 - PRs siempre contra `develop`; `main` solo recibe versiones estables.

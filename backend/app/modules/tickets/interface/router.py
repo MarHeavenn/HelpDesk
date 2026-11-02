@@ -20,6 +20,7 @@ cerrado.
 
 import json
 from collections.abc import Callable, Coroutine
+from datetime import datetime, timezone
 from email.message import Message
 from typing import Any, TypeVar
 
@@ -31,6 +32,8 @@ from app.modules.identity.interface.dependencies import get_current_user
 from app.modules.identity.interface.technicians_contract import (
     get_technician_summary,
 )
+from app.modules.sla.domain.entities import TicketSlaSnapshot
+from app.modules.sla.interface.contract import get_ticket_sla
 from app.modules.tickets.application.assign_ticket import assign_ticket
 from app.modules.tickets.application.create_ticket import (
     TicketValidationError,
@@ -68,6 +71,7 @@ from app.modules.tickets.interface.schemas import (
     SetAssigneeRequest,
     SetPriorityRequest,
     SetStatusRequest,
+    SlaResponse,
     TicketResponse,
     TicketSummaryResponse,
 )
@@ -87,7 +91,41 @@ def _assignee_response(ticket: Ticket) -> AssigneeResponse | None:
     return AssigneeResponse(id=ticket.assignee_id, name=ticket.assignee_name)
 
 
-def _ticket_response(ticket: Ticket) -> TicketResponse:
+def _sla_response(
+    ticket: Ticket, now: datetime | None = None
+) -> SlaResponse | None:
+    """Compone el SLA del ticket o `None` si aun no tiene prioridad.
+
+    Delega en el contrato de `sla` con los datos que ese modulo necesita
+    (prioridad, creacion y resolucion), sin que `sla` conozca `Ticket`
+    (HU-05, RF-42, RF-44). `now` permite que un listado use un unico
+    instante de referencia; si falta, el contrato usa el reloj del sistema.
+    """
+    sla = get_ticket_sla(
+        TicketSlaSnapshot(
+            priority=ticket.priority,
+            created_at=ticket.created_at,
+            resolved_at=ticket.resolved_at,
+        ),
+        now=now,
+    )
+    if sla is None:
+        return None
+    return SlaResponse(
+        target_minutes=sla.target_minutes,
+        started_at=sla.started_at.isoformat(),
+        due_at=sla.due_at.isoformat(),
+        elapsed_minutes=sla.elapsed_minutes,
+        remaining_minutes=sla.remaining_minutes,
+        status=sla.status,
+        near_due=sla.near_due,
+        breached=sla.breached,
+    )
+
+
+def _ticket_response(
+    ticket: Ticket, now: datetime | None = None
+) -> TicketResponse:
     """Serializa el ticket completo (fecha con offset UTC y microsegundos)."""
     return TicketResponse(
         id=ticket.id,
@@ -96,12 +134,15 @@ def _ticket_response(ticket: Ticket) -> TicketResponse:
         priority=ticket.priority,
         status=ticket.status,
         assignee=_assignee_response(ticket),
+        sla=_sla_response(ticket, now),
         created_at=ticket.created_at.isoformat(),
         requester_id=ticket.requester_id,
     )
 
 
-def ticket_summary(ticket: Ticket) -> TicketSummaryResponse:
+def ticket_summary(
+    ticket: Ticket, now: datetime | None = None
+) -> TicketSummaryResponse:
     """Serializa el resumen del listado (sin descripcion, RF-15, RF-35.1)."""
     return TicketSummaryResponse(
         id=ticket.id,
@@ -109,6 +150,7 @@ def ticket_summary(ticket: Ticket) -> TicketSummaryResponse:
         priority=ticket.priority,
         status=ticket.status,
         assignee=_assignee_response(ticket),
+        sla=_sla_response(ticket, now),
         created_at=ticket.created_at.isoformat(),
     )
 
@@ -319,7 +361,9 @@ def list_tickets_endpoint(
         requester_id=current["id"],
         tickets=get_ticket_repository(),
     )
-    return [ticket_summary(ticket) for ticket in tickets]
+    # Un unico instante de referencia para todo el listado (HU-05).
+    now = datetime.now(timezone.utc)
+    return [ticket_summary(ticket, now) for ticket in tickets]
 
 
 @router.get("/{ticket_id}", response_model=TicketResponse)

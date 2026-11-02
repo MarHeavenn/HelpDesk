@@ -96,6 +96,7 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
         "priority",
         "status",
         "assignee",
+        "sla",
         "created_at",
         "requester_id",
     }

@@ -58,7 +58,7 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 PASSWORD = "Secreta123"
 BASE = datetime(2026, 10, 19, 12, 0, 0, tzinfo=timezone.utc)
 # Composicion exacta del resumen (RF-15, RF-35.1, RF-36), con `assignee`.
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 ASSIGNEE_FIELDS = {"id", "name"}
 
 api = TestClient(app)

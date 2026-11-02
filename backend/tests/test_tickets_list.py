@@ -125,6 +125,7 @@ def test_list_returns_only_own_tickets_with_summary_fields():
             "priority",
             "status",
             "assignee",
+            "sla",
             "created_at",
         }
         assert "description" not in item

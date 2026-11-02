@@ -56,6 +56,10 @@ DESCRIPTION_MIN_LENGTH = 1
 DESCRIPTION_MAX_LENGTH = 5000
 OPEN_STATUS = "Abierto"
 CLOSED_STATUS = "Cerrado"
+RESOLVED_STATUS = "Resuelto"
+
+# Estados que congelan el SLA del ticket (HU-05, RF-46).
+RESOLVED_STATUSES = frozenset({RESOLVED_STATUS, CLOSED_STATUS})
 
 # Catalogos de HU-03 (RF-21). El orden es el del RF y de la spec.
 PRIORITIES = ("Crítica", "Alta", "Media", "Baja")
@@ -160,6 +164,8 @@ class Ticket:
     (`assignee_id`/`assignee_name`) nace vacio mientras el ticket no se
     asigne (RF-34); los campos con valor por defecto van al final. Sin
     asignacion ambos campos del tecnico son `None` (RF-35.3).
+    `resolved_at` (HU-05) nace vacia y la fija el caso de uso al pasar a
+    `Resuelto` o `Cerrado`; es el instante en que se congela el SLA.
     """
 
     id: str
@@ -171,6 +177,9 @@ class Ticket:
     status: str = OPEN_STATUS
     assignee_id: str | None = None
     assignee_name: str | None = None
+    # Fecha y hora de resolucion (HU-05, RF-46). Vacia mientras el ticket
+    # no este `Resuelto` ni `Cerrado`; el SLA se congela en este instante.
+    resolved_at: datetime | None = None
 
 
 @dataclass

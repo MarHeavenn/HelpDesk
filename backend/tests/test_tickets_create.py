@@ -94,6 +94,7 @@ def test_create_ticket_returns_201_with_ticket_payload():
         "priority",
         "status",
         "assignee",
+        "sla",
         "created_at",
         "requester_id",
     }

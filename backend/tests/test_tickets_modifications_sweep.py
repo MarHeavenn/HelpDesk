@@ -96,10 +96,11 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "sla",
     "created_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 
 # Mapa RF -> test(s) que lo cubren (contrastado por
 # `test_sweep_rf_map_covers_all_requirements`).
@@ -320,6 +321,7 @@ def test_sweep_modification_raw_composition():
         "priority": None,
         "status": "En progreso",
         "assignee": None,
+        "sla": None,
         "created_at": created["created_at"],
         "requester_id": requester["id"],
     }
@@ -331,7 +333,8 @@ def test_sweep_modification_raw_composition():
     priority_change = _put("priority", created["id"], {"priority": "Alta"})
     assert priority_change.status_code == 200
     raw_priority = json.loads(priority_change.text)
-    assert raw_priority == {
+    # El SLA tiene tiempos dependientes del reloj: se compara aparte.
+    assert {key: value for key, value in raw_priority.items() if key != "sla"} == {
         "id": created["id"],
         "title": "Titulo de barrido",
         "description": "Descripcion de barrido",
@@ -341,6 +344,7 @@ def test_sweep_modification_raw_composition():
         "created_at": created["created_at"],
         "requester_id": requester["id"],
     }
+    assert raw_priority["sla"]["target_minutes"] == 240
     assert '"priority":"Alta"' in priority_change.text
     assert '"status":"En progreso"' in priority_change.text
     assert '"assignee":null' in priority_change.text

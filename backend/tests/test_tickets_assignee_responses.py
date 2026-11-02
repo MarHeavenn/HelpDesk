@@ -65,7 +65,7 @@ PASSWORD = "Secreta123"
 
 # Composiciones exactas de RF-35.1, RF-35.2 y RF-35.3 (D7). `assignee` es
 # el unico campo anadido a las composiciones de HU-02/HU-03.
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 DETAIL_FIELDS = {
     "id",
     "title",
@@ -73,6 +73,7 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "sla",
     "created_at",
     "requester_id",
 }

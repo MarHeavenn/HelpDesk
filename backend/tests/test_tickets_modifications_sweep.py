@@ -96,8 +96,10 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
     "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
 SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
@@ -321,8 +323,14 @@ def test_sweep_modification_raw_composition():
         "priority": None,
         "status": "En progreso",
         "assignee": None,
+        "requester": {
+            "id": requester["id"],
+            "name": "Ana Perez",
+            "email": "ana@ejemplo.com",
+        },
         "sla": None,
         "created_at": created["created_at"],
+        "resolved_at": None,
         "requester_id": requester["id"],
     }
     assert '"priority":null' in status_change.text
@@ -341,7 +349,13 @@ def test_sweep_modification_raw_composition():
         "priority": "Alta",
         "status": "En progreso",
         "assignee": None,
+        "requester": {
+            "id": requester["id"],
+            "name": "Ana Perez",
+            "email": "ana@ejemplo.com",
+        },
         "created_at": created["created_at"],
+        "resolved_at": None,
         "requester_id": requester["id"],
     }
     assert raw_priority["sla"]["target_minutes"] == 240

@@ -2,16 +2,30 @@
 
 ## Estado actual
 
-- HU-01..HU-04 completas en `develop`. Suite completa con `DATABASE_URL`:
-  **797 passed, 3 failed** (los 3 fallos son previos: precedencia 401/404 con
-  cookie invalida por `starlette`/`httpx`).
+- HU-01..HU-05 completas en `develop` (HU-05 mergeada, PR #10). Suite completa con
+  `DATABASE_URL`: **826 passed, 3 failed** (los 3 fallos son previos: precedencia
+  401/404 con cookie invalida por `starlette`/`httpx`).
+- HU-06 (detalle del ticket) **implementada** en `feature/Hu-06-tickets-sla`
+  (cambios sin commit): spec, plan y `tasks.md` en `specs/features/HU-06-ticket-detail/`
+  (tareas redactadas a posteriori, todas cerradas).
 - TSK-025 (PostgreSQL multitenant) mergeada (PR #9). Los modulos siguen con
   persistencia en memoria; integrarlos con PostgreSQL es una tarea aparte.
-- HU-05 (SLA por prioridad) **implementada** en `feature/SLA-por-prioridad`
-  (cambios sin commit): spec, plan y `tasks.md` en `specs/features/HU-05-sla/`
-  (tareas redactadas a posteriori, todas cerradas).
-- HU-20 (frontend) con spec/plan/tareas, sin codigo. HU-06..HU-19 definidas
+- HU-20 (frontend) con spec/plan/tareas, sin codigo. HU-07..HU-19 definidas
   solo en el documento general.
+
+## Decisiones HU-06
+
+- Cliente solo sus tickets (HU-02); `tecnico` y `administrador` abren cualquier
+  ticket, asignado o no. Sin rutas nuevas: se amplia `GET /api/tickets/{id}`.
+- `TicketResponse` (creacion, detalle, prioridad, estado y asignacion) añade
+  `requester {id, name, email}` y `resolved_at`; `requester_id` se conserva.
+  Los resumenes de listado no cambian (evita una lectura N+1).
+- `requester` se resuelve por contrato de `identity` (`user_summaries` +
+  `users_contract`); `null` si no se resuelve; nunca rol, hash ni credenciales.
+- 404 uniforme para staff con ticket inexistente o identificador invalido;
+  401 antes que 404. El detalle es de solo lectura: HU-03/HU-04 no cambian.
+- «Todos los tickets» con busqueda, filtros y paginacion (ADR-002) queda fuera;
+  corresponde a otra historia.
 
 ## Decisiones HU-05
 
@@ -22,21 +36,15 @@
 - `sla` va dentro de todas las respuestas de ticket (misma composicion).
 - Al pasar a `Resuelto`/`Cerrado` se fija `Ticket.resolved_at` y el SLA se
   congela (`cumplido`/`incumplido`); al reabrir se descarta y se reanuda.
-- Estados: `en_tiempo`, `en_riesgo`, `cumplido`, `incumplido`; indicadores
-  `near_due` y `breached`.
 - Calculo puro en `sla/domain`; `tickets.interface` lo compone via
   `sla/interface/contract.py`. `sla` nunca importa `tickets` (sin ciclo).
-- Los listados usan un unico `now` por respuesta.
-- No existe ruta publica de configuracion (`GET/PUT /api/sla/policies` -> 404).
 
 ## Decisiones TSK-025
 
 - Una BD y un esquema para todas las empresas; `company_id` en `users`,
   `tickets` y `sla_policies`; `ticket_sla` y `ticket_comments` lo heredan.
 - FK compuestas `(company_id, requester_id/assignee_id) -> users(company_id,id)`.
-- Trigger al crear empresa: SLA 120/240/720/1440 min.
 - Email unico global; roles `cliente`, `tecnico`, `administrador`.
-- Migraciones SQL propias (`migrations/run.py` + `schema_migrations`), sin ORM.
 
 ## Entorno local
 
@@ -58,12 +66,12 @@
 - 422 de Pydantic devuelven `detail` lista; los del dominio, string.
 - Un `TestClient` tiene una sola cookie: usar un cliente por rol.
 - Al cambiar el contrato de ticket hay que ajustar los tests que comparan el
-  conjunto exacto de campos; los tests de API envejecen el ticket mutando
-  `created_at` para no dormir.
+  conjunto exacto de campos (ahora incluye `requester` y `resolved_at`); los
+  tests de API envejecen el ticket mutando `created_at` para no dormir.
 
 ## Proximos pasos
 
-- Commit/PR de HU-05 contra `develop`.
+- Commit/PR de HU-06 contra `develop`.
 - HU-14: configuracion publica de SLA (API/UI).
 - Integrar los modulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos por dependencias actuales.

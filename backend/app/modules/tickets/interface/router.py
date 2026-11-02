@@ -32,6 +32,7 @@ from app.modules.identity.interface.dependencies import get_current_user
 from app.modules.identity.interface.technicians_contract import (
     get_technician_summary,
 )
+from app.modules.identity.interface.users_contract import get_user_summary
 from app.modules.sla.domain.entities import TicketSlaSnapshot
 from app.modules.sla.interface.contract import get_ticket_sla
 from app.modules.tickets.application.assign_ticket import assign_ticket
@@ -48,7 +49,7 @@ from app.modules.tickets.application.get_modifiable_ticket import (
 )
 from app.modules.tickets.application.get_ticket import (
     TicketNotFoundError,
-    get_my_ticket,
+    get_ticket_detail,
 )
 from app.modules.tickets.application.list_tickets import list_my_tickets
 from app.modules.tickets.application.set_ticket_priority import set_ticket_priority
@@ -68,6 +69,7 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 from app.modules.tickets.interface.schemas import (
     AssigneeResponse,
     CreateTicketRequest,
+    RequesterResponse,
     SetAssigneeRequest,
     SetPriorityRequest,
     SetStatusRequest,
@@ -123,6 +125,19 @@ def _sla_response(
     )
 
 
+def _requester_response(ticket: Ticket) -> RequesterResponse | None:
+    """Compone la vista del solicitante o `None` si no se puede resolver.
+
+    Delegado al contrato de `identity` (HU-06, RF-53): `tickets` no accede
+    al repositorio de usuarios ni expone rol, credenciales o hash. Un
+    solicitante inexistente devuelve `None` sin romper el detalle.
+    """
+    user = get_user_summary(ticket.requester_id)
+    if user is None:
+        return None
+    return RequesterResponse(id=user.id, name=user.name, email=user.email)
+
+
 def _ticket_response(
     ticket: Ticket, now: datetime | None = None
 ) -> TicketResponse:
@@ -134,8 +149,14 @@ def _ticket_response(
         priority=ticket.priority,
         status=ticket.status,
         assignee=_assignee_response(ticket),
+        requester=_requester_response(ticket),
         sla=_sla_response(ticket, now),
         created_at=ticket.created_at.isoformat(),
+        resolved_at=(
+            ticket.resolved_at.isoformat()
+            if ticket.resolved_at is not None
+            else None
+        ),
         requester_id=ticket.requester_id,
     )
 
@@ -371,18 +392,20 @@ def get_ticket_endpoint(
     ticket_id: str,
     current: dict = Depends(get_current_user),
 ) -> TicketResponse:
-    """Detalle de un ticket propio (RF-16, RF-17).
+    """Detalle de un ticket visible para el actor (HU-02 y HU-06).
 
     `ticket_id` se declara como `str` (no `uuid.UUID`) para que un
-    identificador mal formado no devuelva 422 de FastAPI: el formato y la
-    propiedad se resuelven en la logica y se traducen aqui a 404. Sin
-    sesion valida, `get_current_user` responde 401 antes del handler
-    (precedencia 401 > 404, RF-18).
+    identificador mal formado no devuelva 422 de FastAPI: el formato, la
+    existencia y la visibilidad se resuelven en la logica y se traducen
+    aqui a 404. Un cliente solo ve sus tickets (HU-02); un tecnico o un
+    administrador ve cualquiera (HU-06, RF-51, RF-52). Sin sesion valida,
+    `get_current_user` responde 401 antes del handler (RF-57).
     """
     try:
-        ticket = get_my_ticket(
+        ticket = get_ticket_detail(
             ticket_id=ticket_id,
-            requester_id=current["id"],
+            actor_id=current["id"],
+            actor_role=current["role"],
             tickets=get_ticket_repository(),
         )
     except TicketNotFoundError as exc:

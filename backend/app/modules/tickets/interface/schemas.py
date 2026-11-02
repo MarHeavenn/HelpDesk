@@ -58,6 +58,19 @@ class AssigneeResponse(BaseModel):
     name: str
 
 
+class RequesterResponse(BaseModel):
+    """Solicitante de un ticket (HU-06, RF-53).
+
+    Identificador opaco, nombre y correo, resueltos por el contrato de
+    `identity`. Nunca incluye rol, contrasena, hash ni otros datos de
+    credenciales (RF-59).
+    """
+
+    id: str
+    name: str
+    email: str
+
+
 class SlaResponse(BaseModel):
     """SLA calculado de un ticket (HU-05, RF-44).
 
@@ -81,10 +94,12 @@ class TicketResponse(BaseModel):
     """Ticket completo devuelto por creacion, detalle y modificacion.
 
     `priority` es `None` mientras no se fije (RF-27.2). `assignee` es
-    `None` mientras el ticket no tenga responsable (RF-35.3). `sla` es
-    `None` mientras no haya prioridad (HU-05, RF-42). `created_at` se
-    serializa en ISO 8601/RFC 3339 con offset UTC y microsegundos
-    (contrato de la planificacion, D6).
+    `None` mientras el ticket no tenga responsable (RF-35.3). `requester`
+    es la vista del solicitante (HU-06, RF-53) o `None` si no se resuelve.
+    `resolved_at` es `None` mientras el ticket no este resuelto (HU-05,
+    RF-46). `sla` es `None` mientras no haya prioridad (HU-05, RF-42).
+    Las fechas se serializan en ISO 8601/RFC 3339 con offset UTC y
+    microsegundos (contrato de la planificacion, D6).
     """
 
     id: str
@@ -93,8 +108,10 @@ class TicketResponse(BaseModel):
     priority: str | None
     status: str
     assignee: AssigneeResponse | None
+    requester: RequesterResponse | None
     sla: SlaResponse | None
     created_at: str
+    resolved_at: str | None
     requester_id: str
 
 

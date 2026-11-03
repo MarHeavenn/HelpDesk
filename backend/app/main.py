@@ -9,6 +9,7 @@ from app.modules.identity.interface.router import router as auth_router
 from app.modules.identity.interface.technicians_router import (
     router as technicians_router,
 )
+from app.modules.sla.interface.router import router as sla_router
 from app.modules.tickets.interface.assignments_router import (
     router as assignments_router,
 )
@@ -45,6 +46,7 @@ app.include_router(technicians_router)
 app.include_router(tickets_router)
 app.include_router(assignments_router)
 app.include_router(comments_router)
+app.include_router(sla_router)
 
 
 @app.get("/health")

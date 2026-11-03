@@ -14,13 +14,20 @@ Reglas:
 - Cambio efectivo -> muta `Ticket.priority` y anade un registro con el
   responsable de la sesion, la fecha/hora del sistema y los valores
   anterior (`None` en la primera prioridad) y nuevo (RF-26).
+- Si el ticket esta `Resuelto`/`Cerrado`, el cambio de prioridad re-congela
+  el SLA con el tiempo objetivo **vigente en ese momento** para la nueva
+  prioridad, manteniendo la fecha de resolucion ya registrada (HU-14,
+  RF-76).
 """
 
 from datetime import datetime, timezone
 
+from app.modules.sla.domain.entities import TicketSlaSnapshot
+from app.modules.sla.interface.contract import get_ticket_sla
 from app.modules.tickets.application.create_ticket import TicketValidationError
 from app.modules.tickets.domain.entities import (
     PRIORITY_FIELD,
+    RESOLVED_STATUSES,
     Ticket,
     TicketModification,
     validate_priority,
@@ -28,6 +35,28 @@ from app.modules.tickets.domain.entities import (
 from app.modules.tickets.infrastructure.ticket_modification_log import (
     InMemoryTicketModificationLog,
 )
+
+
+def _re_freeze_resolved(ticket: Ticket, new_priority: str) -> None:
+    """Re-congela el objetivo del resuelto con la configuracion vigente.
+
+    El snapshot se construye sin `resolved_target_minutes` para que el
+    calculo resuelva la configuracion actual de la nueva prioridad; luego
+    el ticket queda congelado con ese nuevo objetivo (HU-14, RF-76).
+    """
+    if ticket.status not in RESOLVED_STATUSES or ticket.resolved_at is None:
+        return
+    sla = get_ticket_sla(
+        TicketSlaSnapshot(
+            priority=new_priority,
+            created_at=ticket.created_at,
+            resolved_at=ticket.resolved_at,
+        ),
+        now=ticket.resolved_at,
+    )
+    ticket.resolved_target_minutes = (
+        sla.target_minutes if sla is not None else None
+    )
 
 
 def set_ticket_priority(
@@ -59,6 +88,7 @@ def set_ticket_priority(
 
     previous_priority = ticket.priority
     ticket.priority = new_priority
+    _re_freeze_resolved(ticket, new_priority)
     modifications.add(
         TicketModification(
             ticket_id=ticket.id,

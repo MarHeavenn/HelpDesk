@@ -55,7 +55,12 @@ def list_attention_tickets(
         if ticket.status in RESOLVED_STATUSES:
             continue
         sla = get_ticket_sla(
-            TicketSlaSnapshot(ticket.priority, ticket.created_at, ticket.resolved_at),
+            TicketSlaSnapshot(
+                ticket.priority,
+                ticket.created_at,
+                ticket.resolved_at,
+                ticket.resolved_target_minutes,
+            ),
             reference,
         )
         if sla is None:

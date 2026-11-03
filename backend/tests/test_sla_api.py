@@ -9,8 +9,8 @@ Mapa RF -> test:
   y la asignacion no altera el SLA.
 - RF-48: el estado se deriva en cada consulta (un ticket envejecido pasa a
   `incumplido` sin tocar el ticket).
-- RF-49: el cliente solo ve el SLA de sus tickets y no hay ruta publica de
-  configuracion.
+- RF-49: el cliente solo ve el SLA de sus tickets; la configuracion de SLA
+  es privada del administrador (HU-14).
 
 Los estados dependientes del reloj usan tickets envejecidos con margenes
 amplios (horas), nunca limites exactos; los limites exactos se cubren en
@@ -31,6 +31,9 @@ from app.modules.identity.application.provision import provision_user
 from app.modules.identity.infrastructure.session_store import get_session_store
 from app.modules.identity.infrastructure.user_repository import (
     get_user_repository,
+)
+from app.modules.sla.infrastructure.sla_policy_repository import (
+    get_sla_policy_repository,
 )
 from app.modules.tickets.infrastructure.assignment_log import (
     get_assignment_log,
@@ -68,6 +71,7 @@ def clean_state():
     get_ticket_repository().clear()
     get_ticket_modification_log().clear()
     get_assignment_log().clear()
+    get_sla_policy_repository().reset()
     for api in ALL_CLIENTS:
         api.cookies.clear()
     yield
@@ -76,6 +80,7 @@ def clean_state():
     get_ticket_repository().clear()
     get_ticket_modification_log().clear()
     get_assignment_log().clear()
+    get_sla_policy_repository().reset()
     for api in ALL_CLIENTS:
         api.cookies.clear()
 
@@ -374,11 +379,15 @@ def test_client_does_not_see_the_sla_of_another_client():
     assert "sla" not in response.text
 
 
-def test_there_is_no_public_sla_configuration_route():
-    _provision(admin_api, "administrador", "admin@ejemplo.com")
+def test_sla_configuration_route_requires_a_session():
+    # HU-14 sustituye la ausencia de ruta por el contrato privado: la
+    # consulta existe pero exige sesion (el administrador se prueba en
+    # `test_sla_policies_api.py`).
+    response = client_api.get("/api/sla/policies")
 
-    assert admin_api.get("/api/sla/policies").status_code == 404
-    assert admin_api.put("/api/sla/policies").status_code == 404
+    assert response.status_code == 401
+    assert set(response.json()) == {"detail"}
+    assert "policies" not in response.text.lower()
 
 
 def test_invalid_priority_returns_422_and_keeps_sla_null():

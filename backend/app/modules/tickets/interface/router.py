@@ -111,6 +111,7 @@ def _sla_response(
             priority=ticket.priority,
             created_at=ticket.created_at,
             resolved_at=ticket.resolved_at,
+            resolved_target_minutes=ticket.resolved_target_minutes,
         ),
         now=now,
     )

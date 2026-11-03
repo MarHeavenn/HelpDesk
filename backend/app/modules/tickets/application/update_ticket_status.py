@@ -18,10 +18,16 @@ Reglas:
   `resolved_at` con el mismo instante del registro; al volver a un estado
   no resuelto se descarta. `Resuelto` -> `Cerrado` conserva el instante
   original. Un cambio al mismo estado no toca `resolved_at`.
+- Objetivo congelado (HU-14, RF-76): al resolver se guarda una sola vez el
+  tiempo objetivo vigente en ese momento (`resolved_target_minutes`); al
+  reabrir se descarta junto con `resolved_at`, de modo que el SLA vuelve a
+  derivarse de la configuracion vigente.
 """
 
 from datetime import datetime, timezone
 
+from app.modules.sla.domain.entities import TicketSlaSnapshot
+from app.modules.sla.interface.contract import get_ticket_sla
 from app.modules.tickets.application.create_ticket import TicketValidationError
 from app.modules.tickets.domain.entities import (
     RESOLVED_STATUSES,
@@ -33,6 +39,21 @@ from app.modules.tickets.domain.entities import (
 from app.modules.tickets.infrastructure.ticket_modification_log import (
     InMemoryTicketModificationLog,
 )
+
+
+def _resolved_target_minutes(
+    ticket: Ticket, resolved_at: datetime
+) -> int | None:
+    """Objetivo de SLA vigente al resolver, o `None` sin prioridad."""
+    sla = get_ticket_sla(
+        TicketSlaSnapshot(
+            priority=ticket.priority,
+            created_at=ticket.created_at,
+            resolved_at=resolved_at,
+        ),
+        now=resolved_at,
+    )
+    return sla.target_minutes if sla is not None else None
 
 
 def update_ticket_status(
@@ -67,12 +88,18 @@ def update_ticket_status(
     ticket.status = new_status
     if new_status in RESOLVED_STATUSES:
         # `Resuelto` -> `Cerrado` conserva la resolucion original; el
-        # primer paso a un estado resuelto fija el instante (RF-46).
+        # primer paso a un estado resuelto fija el instante y congela el
+        # objetivo vigente en ese momento (RF-46, HU-14 RF-76).
         if ticket.resolved_at is None:
             ticket.resolved_at = changed_at
+            ticket.resolved_target_minutes = _resolved_target_minutes(
+                ticket, changed_at
+            )
     else:
-        # Reapertura: el SLA vuelve a evolucionar desde la creacion.
+        # Reapertura: el SLA vuelve a evolucionar desde la creacion y con
+        # la configuracion vigente (HU-14, RF-76).
         ticket.resolved_at = None
+        ticket.resolved_target_minutes = None
     modifications.add(
         TicketModification(
             ticket_id=ticket.id,

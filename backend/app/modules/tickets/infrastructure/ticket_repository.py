@@ -52,6 +52,12 @@ class InMemoryTicketRepository:
         tickets.sort(key=lambda ticket: ticket.created_at, reverse=True)
         return tickets
 
+    def list_all(self) -> list[Ticket]:
+        """Todos los tickets del sistema, ordenados por created_at descendente."""
+        tickets = list(self._by_id.values())
+        tickets.sort(key=lambda ticket: ticket.created_at, reverse=True)
+        return tickets
+
     def count(self) -> int:
         """Numero de tickets almacenados."""
         return len(self._by_id)

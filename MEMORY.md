@@ -2,13 +2,14 @@
 
 ## Estado actual
 
-- HU-01..HU-05 completas en `develop` (HU-05 mergeada, PR #10).
-- HU-06 (detalle del ticket) y HU-07 (seguimiento y comentarios) **implementadas**
-  en `feature/Hu-06-tickets-sla` (cambios sin commit): spec, plan y `tasks.md`
-  (redactadas a posteriori, todas cerradas) en
-  `specs/features/HU-06-ticket-detail/` y `specs/features/HU-07-ticket-comments/`.
-- Suite completa con `DATABASE_URL`: **881 passed, 3 failed** (los 3 fallos son
-  previos: precedencia 401/404 con cookie invalida por `starlette`/`httpx`).
+- HU-01..HU-05 completas en `develop` (HU-05 mergeada, PR #10). Suite completa con
+  `DATABASE_URL`: **826 passed, 3 failed** (los 3 fallos son previos: precedencia
+  401/404 con cookie invalida por `starlette`/`httpx`).
+- HU-06 (detalle del ticket) **implementada** en `feature/Hu-06-tickets-sla`
+  (cambios sin commit): spec, plan y `tasks.md` en `specs/features/HU-06-ticket-detail/`
+  (tareas redactadas a posteriori, todas cerradas).
+- HU-10 (alertas SLA) **implementada** en `specs/features/HU-10-sla-alerts/`
+  (T1-T6 cerradas; cambios sin commit, a la espera de PR contra `develop`).
 - TSK-025 (PostgreSQL multitenant) mergeada (PR #9). Los modulos siguen con
   persistencia en memoria; integrarlos con PostgreSQL es una tarea aparte.
 - `HU-20` (frontend) con spec/plan/tareas, sin codigo. HU-08..HU-19 definidas
@@ -43,6 +44,19 @@
   401 antes que 404. El detalle es de solo lectura: HU-03/HU-04 no cambian.
 - «Todos los tickets» con busqueda, filtros y paginacion (ADR-002) queda fuera;
   corresponde a otra historia.
+
+## Decisiones HU-10
+
+- Listado `GET /api/tickets/requiring-attention`: consulta derivada y de solo
+  lectura de tickets activos (`Abierto`/`En progreso`) con SLA `en_riesgo` o
+  `incumplido`. Reutiliza `get_ticket_sla` de HU-05 (umbral 20 %), sin calculo,
+  umbral ni estado persistido nuevos (se deriva en vivo con un unico `now`).
+- `list_all()` en `ticket_repository.py` devuelve todos los tickets (sin filtrar
+  por creador/asignacion); la regla vive en `list_attention_tickets.py` (aplicacion).
+- Ruta estatica declarada **antes** de `/{ticket_id}` para no colisionar.
+- Guardia de rol de gestion (`tecnico`/`administrador`) antes de leer el repo:
+  cliente -> 404 uniforme (`TicketNotFoundError`), sin sesion -> 401 (precedencia
+  401 > 404). Orden por `sla.due_at` ascendente; composicion de resumen HU-04/HU-06.
 
 ## Decisiones HU-05
 
@@ -88,7 +102,8 @@
 
 ## Proximos pasos
 
-- Commit/PR de HU-06 y HU-07 contra `develop` (misma rama `feature/Hu-06-tickets-sla`).
+- Commit/PR de HU-06 contra `develop`.
+- Commit/PR de HU-10 contra `develop` (cambios ya en verde, sin commit).
 - HU-14: configuracion publica de SLA (API/UI).
 - Integrar los modulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos por dependencias actuales.

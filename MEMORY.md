@@ -12,8 +12,24 @@
   (T1-T6 cerradas; cambios sin commit, a la espera de PR contra `develop`).
 - TSK-025 (PostgreSQL multitenant) mergeada (PR #9). Los modulos siguen con
   persistencia en memoria; integrarlos con PostgreSQL es una tarea aparte.
-- HU-20 (frontend) con spec/plan/tareas, sin codigo. HU-07..HU-19 definidas
+- `HU-20` (frontend) con spec/plan/tareas, sin codigo. HU-08..HU-19 definidas
   solo en el documento general.
+
+## Decisiones HU-07
+
+- Subrecurso `POST/GET /api/tickets/{ticket_id}/comments`: no cambia
+  `TicketResponse` ni los resumenes de HU-02..HU-06.
+- Escriben `tecnico` y `administrador`; el cliente que intenta escribir recibe el
+  404 uniforme (`ticket not found`), aunque el ticket sea suyo. Sin 403.
+- Lee quien puede ver el ticket (misma regla de HU-06): cliente solo los suyos;
+  staff cualquiera. Un ticket `Cerrado` responde 409 al comentar y 200 al listar.
+- `body` texto estricto, recortado, 1-2000 code points; 422 si es invalido o
+  trae campos extra. Autor de la sesion y `created_at` del sistema.
+- Respuesta: `{id, ticket_id, body, author: {id, name} | null, created_at}`;
+  el autor se resuelve con `get_user_summary`. Sin correo, rol ni credenciales.
+- Listado ascendente por `created_at`; empate conserva el orden de registro.
+- Persistencia en memoria (`InMemoryTicketCommentRepository`). La tabla
+  `ticket_comments` ya existe; conectarla a PostgreSQL sigue pendiente.
 
 ## Decisiones HU-06
 

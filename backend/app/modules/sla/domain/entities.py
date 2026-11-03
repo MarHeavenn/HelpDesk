@@ -51,12 +51,16 @@ class TicketSlaSnapshot:
 
     `priority` vacia significa que el ticket aun no tiene SLA (RF-42).
     `resolved_at` distinto de None indica que el ticket se resolvio y el
-    SLA debe congelarse en ese instante (RF-46).
+    SLA debe congelarse en ese instante (RF-46). `resolved_target_minutes`
+    es el objetivo aplicado al resolver (HU-14, RF-76): con `resolved_at`
+    presente fija el vencimiento del ticket resuelto y lo hace estable
+    frente a cambios de la configuracion vigente.
     """
 
     priority: str | None
     created_at: datetime
     resolved_at: datetime | None = None
+    resolved_target_minutes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -88,7 +92,16 @@ def calculate_sla(
     `target_minutes` debe ser positivo. `now` es el instante de referencia
     cuando el ticket no esta resuelto; si `snapshot.resolved_at` tiene
     valor, el SLA se congela y `now` no influye en el estado (RF-46).
+    Cuando el snapshot trae el objetivo aplicado al resolver
+    (`resolved_target_minutes`), se usa ese en lugar de la configuracion
+    vigente: el SLA de un ticket resuelto no cambia al editar la
+    configuracion (HU-14, RF-76).
     """
+    if (
+        snapshot.resolved_at is not None
+        and snapshot.resolved_target_minutes is not None
+    ):
+        target_minutes = snapshot.resolved_target_minutes
     started_at = snapshot.created_at
     due_at = started_at + timedelta(minutes=target_minutes)
     resolved_at = snapshot.resolved_at

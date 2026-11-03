@@ -37,6 +37,9 @@ from app.modules.identity.infrastructure.session_store import (
 from app.modules.identity.infrastructure.user_repository import (
     get_user_repository,
 )
+from app.modules.sla.infrastructure.sla_policy_repository import (
+    get_sla_policy_repository,
+)
 from app.modules.tickets.domain.entities import Ticket
 from app.modules.tickets.infrastructure.assignment_log import (
     get_assignment_log,
@@ -82,10 +85,12 @@ def clean_state():
     get_user_repository().clear()
     get_session_store().clear()
     get_ticket_repository().clear()
+    get_sla_policy_repository().reset()
     yield
     get_user_repository().clear()
     get_session_store().clear()
     get_ticket_repository().clear()
+    get_sla_policy_repository().reset()
 
 
 def _provision(role: str, name: str, email: str) -> dict[str, str]:
@@ -449,15 +454,92 @@ def test_listing_is_read_only_and_does_not_mutate_tickets_or_logs():
 
 def test_no_sla_threshold_configuration_endpoint_exists():
     # RF-67: el umbral de alerta es el 20 % de HU-05, interno y fijo; no hay
-    # operacion publica para leerlo ni modificarlo. Ninguna ruta /api/sla/...
-    # existe, ni siquiera para un rol de gestion (404 de enrutado).
+    # operacion publica para leerlo ni modificarlo. HU-14 añade
+    # /api/sla/policies (configuracion de SLA): la ruta existe, pero para un
+    # tecnico responde el 404 uniforme sin revelar datos; /api/sla y
+    # /api/sla/threshold no existen.
     technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
     api = _login(technician["email"])
 
     for method in ("get", "put"):
-        for path in ("/api/sla", "/api/sla/policies", "/api/sla/threshold"):
+        for path in ("/api/sla", "/api/sla/threshold"):
             response = getattr(api, method)(path)
             assert response.status_code == 404, (method, path, response.text)
+
+    for method in ("get", "put"):
+        response = getattr(api, method)("/api/sla/policies")
+        assert response.status_code == 404, (method, response.text)
+        assert response.json() == {"detail": "not found"}
+
+
+def test_a_shorter_target_makes_a_ticket_enter_attention():
+    # HU-14 RF-76: el listado se deriva de la configuracion vigente en cada
+    # consulta, sin recalcular historial ni mutar el ticket.
+    requester = _register_client("Cliente Uno", "cliente@ejemplo.com")
+    technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
+    api = _login(technician["email"])
+    ticket = _insert_ticket(
+        requester["id"], title="Entra al acortar", minutes_ago=45, priority="Crítica"
+    )
+    before = (ticket.created_at, ticket.priority, ticket.status, ticket.resolved_at)
+
+    assert ticket.id not in _attention_ids(api)
+
+    get_sla_policy_repository().replace(
+        {"Crítica": 30, "Alta": 240, "Media": 720, "Baja": 1440}
+    )
+
+    response = api.get("/api/tickets/requiring-attention")
+    assert response.status_code == 200, response.text
+    item = next(
+        (entry for entry in response.json() if entry["id"] == ticket.id), None
+    )
+    assert item is not None
+    assert item["sla"]["target_minutes"] == 30
+    assert item["sla"]["remaining_minutes"] == 0
+    assert item["sla"]["breached"] is True
+    assert (ticket.created_at, ticket.priority, ticket.status, ticket.resolved_at) == before
+
+
+def test_a_longer_target_makes_a_ticket_leave_attention():
+    # HU-14 RF-76: al ampliar el objetivo el vencimiento se aleja y el
+    # ticket sale del listado; la configuracion no toca su estado.
+    requester = _register_client("Cliente Uno", "cliente@ejemplo.com")
+    technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
+    api = _login(technician["email"])
+    ticket = _attention_ticket(
+        requester["id"], title="Sale al ampliar", hours_ago=23, priority="Baja"
+    )
+    before = (ticket.created_at, ticket.priority, ticket.status, ticket.resolved_at)
+
+    assert ticket.id in _attention_ids(api)
+
+    get_sla_policy_repository().replace(
+        {"Crítica": 120, "Alta": 240, "Media": 720, "Baja": 2880}
+    )
+
+    assert ticket.id not in _attention_ids(api)
+    assert (ticket.created_at, ticket.priority, ticket.status, ticket.resolved_at) == before
+
+
+def test_the_attention_listing_re_derives_without_recalculating_history():
+    # HU-14 RF-76: volver a la semilla devuelve el estado derivado original,
+    # sin historial ni estado persistido en el ticket.
+    requester = _register_client("Cliente Uno", "cliente@ejemplo.com")
+    technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
+    api = _login(technician["email"])
+    ticket = _attention_ticket(
+        requester["id"], title="Vuelve con la semilla", hours_ago=23, priority="Baja"
+    )
+
+    get_sla_policy_repository().replace(
+        {"Crítica": 120, "Alta": 240, "Media": 720, "Baja": 2880}
+    )
+    assert ticket.id not in _attention_ids(api)
+
+    get_sla_policy_repository().reset()
+
+    assert ticket.id in _attention_ids(api)
 
 
 def test_listing_reuses_sla_contract_without_reimplementing_calculation():

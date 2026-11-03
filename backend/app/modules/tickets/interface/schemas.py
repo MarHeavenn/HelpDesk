@@ -48,6 +48,45 @@ class SetAssigneeRequest(BaseModel):
     assignee_id: StrictStr
 
 
+class CreateCommentRequest(BaseModel):
+    """Cuerpo de POST /api/tickets/{ticket_id}/comments (HU-07, RF-62).
+
+    Admite unicamente el contenido del comentario, obligatorio y textual
+    estricto (sin coercion); el autor y la fecha se obtienen de la sesion
+    y del sistema, nunca del cuerpo.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    body: StrictStr
+
+
+class AuthorResponse(BaseModel):
+    """Autor de un comentario de seguimiento (HU-07, RF-67).
+
+    Solo identificador opaco y nombre: nunca correo, rol, credenciales ni
+    hash.
+    """
+
+    id: str
+    name: str
+
+
+class CommentResponse(BaseModel):
+    """Comentario de seguimiento devuelto por la API (HU-07, RF-61).
+
+    Incluye el ticket al que pertenece, el cuerpo ya recortado, el autor
+    resuelto por `identity` (o `None` si no se resuelve) y la fecha y hora
+    en ISO 8601 con offset UTC.
+    """
+
+    id: str
+    ticket_id: str
+    body: str
+    author: AuthorResponse | None
+    created_at: str
+
+
 class AssigneeResponse(BaseModel):
     """Tecnico responsable de un ticket (RF-35.3, RF-35.4).
 

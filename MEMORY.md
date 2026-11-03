@@ -2,16 +2,33 @@
 
 ## Estado actual
 
-- HU-01..HU-05 completas en `develop` (HU-05 mergeada, PR #10). Suite completa con
-  `DATABASE_URL`: **826 passed, 3 failed** (los 3 fallos son previos: precedencia
-  401/404 con cookie invalida por `starlette`/`httpx`).
-- HU-06 (detalle del ticket) **implementada** en `feature/Hu-06-tickets-sla`
-  (cambios sin commit): spec, plan y `tasks.md` en `specs/features/HU-06-ticket-detail/`
-  (tareas redactadas a posteriori, todas cerradas).
+- HU-01..HU-05 completas en `develop` (HU-05 mergeada, PR #10).
+- HU-06 (detalle del ticket) y HU-07 (seguimiento y comentarios) **implementadas**
+  en `feature/Hu-06-tickets-sla` (cambios sin commit): spec, plan y `tasks.md`
+  (redactadas a posteriori, todas cerradas) en
+  `specs/features/HU-06-ticket-detail/` y `specs/features/HU-07-ticket-comments/`.
+- Suite completa con `DATABASE_URL`: **881 passed, 3 failed** (los 3 fallos son
+  previos: precedencia 401/404 con cookie invalida por `starlette`/`httpx`).
 - TSK-025 (PostgreSQL multitenant) mergeada (PR #9). Los modulos siguen con
   persistencia en memoria; integrarlos con PostgreSQL es una tarea aparte.
-- HU-20 (frontend) con spec/plan/tareas, sin codigo. HU-07..HU-19 definidas
+- `HU-20` (frontend) con spec/plan/tareas, sin codigo. HU-08..HU-19 definidas
   solo en el documento general.
+
+## Decisiones HU-07
+
+- Subrecurso `POST/GET /api/tickets/{ticket_id}/comments`: no cambia
+  `TicketResponse` ni los resumenes de HU-02..HU-06.
+- Escriben `tecnico` y `administrador`; el cliente que intenta escribir recibe el
+  404 uniforme (`ticket not found`), aunque el ticket sea suyo. Sin 403.
+- Lee quien puede ver el ticket (misma regla de HU-06): cliente solo los suyos;
+  staff cualquiera. Un ticket `Cerrado` responde 409 al comentar y 200 al listar.
+- `body` texto estricto, recortado, 1-2000 code points; 422 si es invalido o
+  trae campos extra. Autor de la sesion y `created_at` del sistema.
+- Respuesta: `{id, ticket_id, body, author: {id, name} | null, created_at}`;
+  el autor se resuelve con `get_user_summary`. Sin correo, rol ni credenciales.
+- Listado ascendente por `created_at`; empate conserva el orden de registro.
+- Persistencia en memoria (`InMemoryTicketCommentRepository`). La tabla
+  `ticket_comments` ya existe; conectarla a PostgreSQL sigue pendiente.
 
 ## Decisiones HU-06
 
@@ -71,7 +88,7 @@
 
 ## Proximos pasos
 
-- Commit/PR de HU-06 contra `develop`.
+- Commit/PR de HU-06 y HU-07 contra `develop` (misma rama `feature/Hu-06-tickets-sla`).
 - HU-14: configuracion publica de SLA (API/UI).
 - Integrar los modulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos por dependencias actuales.

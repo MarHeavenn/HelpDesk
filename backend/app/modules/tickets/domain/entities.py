@@ -1,13 +1,15 @@
-"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03 y HU-04).
+"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03, HU-04 y HU-07).
 
 Cubre RF-12 (validacion de titulo y descripcion), RF-13 (identificador
 opaco con formato UUID) y RF-19 (estado inicial `Abierto`) de HU-02, de
 HU-03: RF-21 (catalogos de prioridades y estados), RF-27.2/RF-27.3
 (`priority` del ticket, vacia mientras no se fije) y RF-26 (entidad
-`TicketModification` del registro de modificaciones), y de HU-04:
+`TicketModification` del registro de modificaciones), de HU-04:
 RF-34/RF-35.3 (tecnico responsable del ticket, vacio mientras no se
 asigne), RF-37 (entidad `AssignmentRecord` del registro de asignaciones)
-y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion).
+y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion), y de
+HU-07: RF-62/RF-63 (entidad `TicketComment` y validacion del contenido
+del seguimiento).
 
 Reglas:
 - Titulo: obligatorio, tipo cadena de texto, 1-200 code points tras el
@@ -54,6 +56,8 @@ TITLE_MIN_LENGTH = 1
 TITLE_MAX_LENGTH = 200
 DESCRIPTION_MIN_LENGTH = 1
 DESCRIPTION_MAX_LENGTH = 5000
+COMMENT_MIN_LENGTH = 1
+COMMENT_MAX_LENGTH = 2000
 OPEN_STATUS = "Abierto"
 CLOSED_STATUS = "Cerrado"
 RESOLVED_STATUS = "Resuelto"
@@ -111,6 +115,20 @@ def validate_description(raw: object) -> str:
         field="description",
         min_length=DESCRIPTION_MIN_LENGTH,
         max_length=DESCRIPTION_MAX_LENGTH,
+    )
+
+
+def validate_comment_body(raw: object) -> str:
+    """Devuelve el cuerpo del comentario recortado (HU-07, RF-62).
+
+    Exige texto estricto y 1-2000 code points tras el recorte. El valor
+    devuelto es el que debe almacenarse y exponerse.
+    """
+    return _validate_text(
+        raw,
+        field="body",
+        min_length=COMMENT_MIN_LENGTH,
+        max_length=COMMENT_MAX_LENGTH,
     )
 
 
@@ -223,3 +241,21 @@ class AssignmentRecord:
     new_assignee_id: str
     actor_id: str
     assigned_at: datetime
+
+
+@dataclass
+class TicketComment:
+    """Comentario de seguimiento de un ticket (HU-07, RF-61, RF-63).
+
+    `id` es un UUID opaco, `ticket_id` el ticket al que pertenece,
+    `author_id` el identificador opaco del usuario autenticado que lo
+    registro (nunca un dato del cuerpo) y `body` el contenido ya recortado
+    y validado. `created_at` lo genera el sistema; los empates no fijan
+    un orden por identificador, sino que conservan el orden de registro.
+    """
+
+    id: str
+    ticket_id: str
+    author_id: str
+    body: str
+    created_at: datetime

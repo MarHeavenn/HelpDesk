@@ -82,3 +82,7 @@ La historia no añade rutas: amplía `GET /api/tickets/{ticket_id}` con visibili
 
 ## Dudas abiertas
 Sin dudas abiertas pendientes.
+
+## Ampliaciones posteriores
+
+- HU-07 (RF-61 a RF-70, `specs/features/HU-07-ticket-comments/spec.md`) añade el subrecurso `POST/GET /api/tickets/{ticket_id}/comments` para el seguimiento. No cambia este contrato: los comentarios no se incluyen en `TicketResponse` ni en los resúmenes, y la visibilidad de lectura reutiliza la regla de RF-51/RF-52.

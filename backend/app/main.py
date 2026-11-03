@@ -12,6 +12,9 @@ from app.modules.identity.interface.technicians_router import (
 from app.modules.tickets.interface.assignments_router import (
     router as assignments_router,
 )
+from app.modules.tickets.interface.comments_router import (
+    router as comments_router,
+)
 from app.modules.tickets.interface.router import router as tickets_router
 
 # Origenes explicitos del frontend (sin comodin "*" con credenciales:
@@ -41,6 +44,7 @@ app.include_router(auth_router)
 app.include_router(technicians_router)
 app.include_router(tickets_router)
 app.include_router(assignments_router)
+app.include_router(comments_router)
 
 
 @app.get("/health")

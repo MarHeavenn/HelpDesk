@@ -63,6 +63,12 @@ export const strings = {
     invalidEmail: 'Ingresa un correo válido',
     requiredPassword: 'Ingresa tu contraseña',
     invalidCredentials: 'Correo o contraseña incorrectos',
+    networkError:
+      'No se pudo iniciar sesión. Revisa tu conexión e inténtalo de nuevo.',
+    checkingSession: 'Validando sesión...',
+    sessionError: 'No se pudo validar la sesión.',
+    noSession: 'No hay una sesión activa',
+    sessionReady: 'La estructura de navegación llega en la siguiente tarea.',
   },
   common: {
     loading: 'Cargando...',

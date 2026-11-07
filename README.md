@@ -2,7 +2,7 @@
 
 Sistema Help Desk SaaS para registrar, asignar y dar seguimiento a tickets de soporte, con control de identidad y roles.
 
-El backend tiene implementadas las HU-01 a HU-04 (registro e inicio de sesión, tickets, prioridad/estado y asignación). El frontend todavía está pendiente: `frontend/` solo contiene la estructura reservada.
+El backend tiene implementadas las HU-01 a HU-04 (registro e inicio de sesión, tickets, prioridad/estado y asignación). El frontend (HU-21) ya tiene scaffold, pantalla de acceso real y capa de sesión; el armazón y las rutas por rol están en construcción.
 
 ## Stack
 
@@ -67,6 +67,16 @@ Variables disponibles: `HOST`, `PORT`, `DEV_ADMIN_NAME`, `DEV_ADMIN_EMAIL`, `DEV
 No se deben guardar contraseñas reales en el repositorio.
 
 > **Persistencia en memoria:** al detener el servidor se pierden los tickets y los usuarios registrados. Los usuarios demo se recrean en cada arranque. PostgreSQL todavía no está conectado.
+
+## Ejecución local del frontend
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+El frontend queda en <http://localhost:5173> y consume la API en `http://localhost:8000` (configurable con `VITE_API_URL`). Abre el frontend con `localhost`, no con `127.0.0.1`, para que la cookie de sesión `SameSite=Lax` viaje a la API. La pantalla `/login` usa la autenticación real del backend.
 
 ## Endpoints implementados
 

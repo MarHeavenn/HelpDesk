@@ -40,4 +40,8 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-02 (crear y consultar tickets): ver `specs/features/HU-02-tickets/spec.md` (plan y tareas aprobados; T1-T8 en verde).
 - HU-03 (prioridad y estado del ticket): ver `specs/features/HU-03-priority-status/` (implementada y validada en `develop`).
 - HU-04 (asignar tickets a técnicos): ver `specs/features/HU-04-assignment/` (implementada y validada en `develop`).
-- HU-05 a HU-20: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
+- HU-11 (dashboard de tickets): ver `specs/features/HU-11-tickets-dashboard/` (spec, plan y tareas aprobadas; RF-81 a RF-92).
+- HU-12 (dashboard de cumplimiento de SLA): ver `specs/features/HU-12-sla-dashboard/` (spec, plan y tareas aprobadas; RF-93 a RF-104).
+- HU-20 (frontend del MVP): ver `specs/features/HU-20-frontend/` (spec, plan y tareas aprobadas; sin código).
+- HU-21 (estructura visual y navegación): ver `specs/features/HU-21-frontend-shell/` (spec, plan y tareas aprobadas; RF-69 a RF-80).
+- HU-05 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { X } from 'lucide-react'
 
 import { useAuth } from '@/context/AuthContext'
 import { strings } from '@/lib/strings'
@@ -11,8 +12,21 @@ import Topbar from '@/layout/Topbar'
  * Acepta `children` para pruebas y composición; sin ellos renderiza el Outlet.
  */
 export default function AppShell({ children }: { children?: ReactNode }) {
-  const { user, logout } = useAuth()
+  const { user, status, logout, refresh } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [deniedNotice, setDeniedNotice] = useState(false)
+
+  useEffect(() => {
+    const state = location.state as { denied?: boolean } | null
+    if (!state?.denied) return
+
+    setDeniedNotice(true)
+    navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: null,
+    })
+  }, [location, navigate])
 
   if (!user) return null
 
@@ -44,6 +58,39 @@ export default function AppShell({ children }: { children?: ReactNode }) {
             className="flex-1 px-4 py-6 sm:px-6 lg:px-8"
           >
             <div className="mx-auto w-full max-w-7xl">
+              {status === 'error' ? (
+                <div
+                  role="alert"
+                  className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+                >
+                  <p>{strings.auth.sessionError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void refresh()}
+                    className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+                  >
+                    {strings.common.retry}
+                  </button>
+                </div>
+              ) : null}
+
+              {deniedNotice ? (
+                <div
+                  role="alert"
+                  className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+                >
+                  <p>{strings.routes.denied}</p>
+                  <button
+                    type="button"
+                    aria-label={strings.common.close}
+                    onClick={() => setDeniedNotice(false)}
+                    className="rounded p-1 text-amber-700 hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              ) : null}
+
               {children ?? <Outlet />}
             </div>
           </main>

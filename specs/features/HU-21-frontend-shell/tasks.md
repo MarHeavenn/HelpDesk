@@ -13,7 +13,7 @@ No se modifica el backend.
   - Hecho cuando: `/login` muestra email/contraseña, validación, estado de carga y errores 401/422 en español; al éxito guarda la identidad y redirige a la primera ruta permitida; un usuario autenticado que abre `/login` es redirigido; no se guardan contraseñas; tests de validación, credenciales incorrectas y éxito en verde.
 - [x] **T5. AppShell, Sidebar, Topbar y PageHeader.** RF-70, RF-72, RF-79
   - Hecho cuando: el armazón muestra logo, espacio de trabajo, navegación filtrada por rol, sección inferior, pie, buscador con ⌘K/Ctrl+K, campana, avatar/nombre/rol con menú, botón de ayuda y `PageHeader`; el ítem activo usa `aria-current="page"`; tests de render y navegación por rol en verde.
-- [ ] **T6. Routing, guards y 404.** RF-69, RF-71, RF-73
+- [x] **T6. Routing, guards y 404.** RF-69, RF-71, RF-73
   - Hecho cuando: todas las rutas de RF-69 existen; `RequireAuth` redirige a `/login`; `RequireRole` redirige a la primera ruta permitida con aviso una vez; `*` muestra 404 con enlace de salida; `/cuenta` redirige a `/cuenta/perfil`; tests de visitante, login autenticado, rol denegado y ruta desconocida en verde.
 - [ ] **T7. Drawer móvil y accesibilidad.** RF-74, RF-75
   - Hecho cuando: en <1024 px el sidebar se abre con un botón, se cierra con Escape/capa/ruta, atrapa el foco y lo devuelve; el contenido ocupa el ancho; existe enlace «Saltar al contenido», regiones semánticas, `aria-expanded`/`aria-controls`, foco visible y etiquetas accesibles; tests de apertura, cierre y foco en verde.

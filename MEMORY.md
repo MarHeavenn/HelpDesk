@@ -12,14 +12,16 @@
   Dashboards con endpoints reales; HU-11 admin global / tecnico asignados /
   cliente 404; HU-12 con 4 estados SLA, umbral 20%, politica 2/4/12/24 h y
   panel dentro de `/`.
-- HU-21 T1..T5 completas en `feature/HU-21-frontend-shell`: scaffold Vite +
+- HU-21 T1..T6 completas en `feature/HU-21-frontend-shell`: scaffold Vite +
   React 18 + TS + Tailwind + Router + Query + Vitest; tipos, textos, fechas
   es-CO y permisos; `httpClient`/`auth.api`/`AuthContext`; `/login` real con
   validacion, estados y redireccion por rol; `AppShell`, `Sidebar`, `Topbar` y
   `PageHeader` con navegacion filtrada por rol, menu de usuario, atajo Ctrl+K y
-  `aria-current`. Suite frontend: **47 tests en verde**. Contrato de auth
-  verificado contra el backend real (login 200 + cookie HttpOnly SameSite=Lax,
-  `/me` 200, logout 204, CORS con credenciales). Siguiente: T6 (rutas y guards).
+  `aria-current`; rutas definitivas con `RequireAuth`, `RequireRole`, aviso de
+  acceso denegado, `/cuenta` -> `/cuenta/perfil` y 404 dentro del armazon.
+  Suite frontend: **64 tests en verde**. Contrato de auth verificado contra el
+  backend real (login 200 + cookie HttpOnly SameSite=Lax, `/me` 200, logout
+  204, CORS con credenciales). Siguiente: T7 (drawer movil y accesibilidad).
 
 ## Decisiones TSK-025
 
@@ -55,7 +57,7 @@
 
 ## Proximos pasos
 
-- HU-21 T6..T10: routing/guards, drawer, marcadores, logout y cierre.
+- HU-21 T7..T10: drawer, marcadores, logout y cierre.
 - HU-11 y HU-12: endpoints reales `GET /api/dashboard/tickets` y `/sla`.
 - Integrar los modulos con PostgreSQL en una tarea aparte.
 - PR de `feature/HU-21-frontend-shell` contra `develop`.

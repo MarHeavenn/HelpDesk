@@ -25,7 +25,7 @@ describe('app', () => {
     render(<App />)
 
     expect(
-      await screen.findByRole('heading', { name: 'No hay una sesión activa' }),
+      await screen.findByRole('heading', { level: 1, name: 'Iniciar sesión' }),
     ).toBeInTheDocument()
   })
 })

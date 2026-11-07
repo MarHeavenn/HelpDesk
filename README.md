@@ -2,11 +2,11 @@
 
 Sistema Help Desk SaaS para registrar, asignar y dar seguimiento a tickets de soporte, con control de identidad y roles.
 
-El backend tiene implementadas las HU-01 a HU-04 (registro e inicio de sesión, tickets, prioridad/estado y asignación). El frontend (HU-21) ya tiene scaffold, pantalla de acceso real, capa de sesión y armazón compartido con navegación por rol; las rutas definitivas y los guards están en construcción.
+El backend tiene implementadas las HU-01 a HU-04 (registro e inicio de sesión, tickets, prioridad/estado y asignación). El frontend (HU-21) ya tiene scaffold, pantalla de acceso real, capa de sesión, armazón compartido con navegación por rol y rutas protegidas con guards y 404; las vistas internas de las secciones aún son marcadores.
 
 ## Stack
 
-- Frontend: React con TypeScript (aún sin aplicación).
+- Frontend: React con TypeScript (Vite).
 - Backend: FastAPI con Python 3.12.
 - Base de datos: PostgreSQL prevista; actualmente la persistencia es en memoria.
 - Infraestructura: `infra/docker-compose.yml` (esqueleto de PostgreSQL, todavía no conectado).
@@ -14,11 +14,14 @@ El backend tiene implementadas las HU-01 a HU-04 (registro e inicio de sesión, 
 ## Requisitos
 
 - Python 3.12.
+- Node.js 20 o superior y npm.
 - Docker es opcional: la API actual no necesita PostgreSQL para funcionar.
 
-## Ejecución local del backend
+## Ejecución local
 
-### Windows (PowerShell)
+### 1. Backend (terminal 1)
+
+Desde la raíz del repositorio:
 
 ```powershell
 python -m venv .venv
@@ -28,22 +31,40 @@ cd backend
 ..\.venv\Scripts\python.exe dev_server.py
 ```
 
-### Linux / macOS
+Si el entorno ya está creado, basta con:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r backend/requirements.txt
+```powershell
 cd backend
-../.venv/bin/python dev_server.py
+..\.venv\Scripts\python.exe dev_server.py
+```
+
+Para fijar las contraseñas demo:
+
+```powershell
+$env:DEV_ADMIN_PASSWORD = "Demo12345"
+$env:DEV_TECH_PASSWORD = "Demo12345"
+..\.venv\Scripts\python.exe dev_server.py
 ```
 
 La API queda disponible en:
 
-- API: <http://127.0.0.1:8000>
-- Swagger UI: <http://127.0.0.1:8000/docs>
-- OpenAPI: <http://127.0.0.1:8000/openapi.json>
-- Health check: <http://127.0.0.1:8000/health>
+- API: <http://localhost:8000>
+- Swagger UI: <http://localhost:8000/docs>
+- Health check: <http://localhost:8000/health>
+
+### 2. Frontend (terminal 2)
+
+Desde la raíz del repositorio:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+El frontend queda en <http://localhost:5173>. `npm` debe ejecutarse dentro de `frontend/`: si aparece `ENOENT ... package.json`, estás en la raíz del repo.
+
+Abre `http://localhost:5173/login` e inicia sesión con una de las cuentas demo. El frontend consume la API en `http://localhost:8000` (configurable con `VITE_API_URL`). Usa `localhost`, no `127.0.0.1`, para que la cookie de sesión `SameSite=Lax` viaje a la API.
 
 ### Usuarios de desarrollo
 
@@ -68,15 +89,39 @@ No se deben guardar contraseñas reales en el repositorio.
 
 > **Persistencia en memoria:** al detener el servidor se pierden los tickets y los usuarios registrados. Los usuarios demo se recrean en cada arranque. PostgreSQL todavía no está conectado.
 
-## Ejecución local del frontend
+## Flujo de ramas y entrega
+
+- `develop` es la rama de integración: cada historia sale de `develop` en una rama `feature/<HU>-<descripcion>` y se integra con un PR **contra `develop`**.
+- `main` solo recibe versiones estables. No se abren PRs directos contra `main`.
+- Cuando `develop` está validado, se promueve a `main` con un PR de release.
+
+```powershell
+git switch develop
+git pull
+git switch -c feature/HU-XX-descripcion
+# ... cambios y pruebas ...
+git add .
+git commit -m "FEAT: descripcion breve (HU-XX)"
+git push -u origin feature/HU-XX-descripcion
+gh pr create --base develop --head feature/HU-XX-descripcion
+```
+
+## Pruebas
+
+Backend (desde la raíz):
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest backend/tests/ -q
+```
+
+Frontend:
 
 ```powershell
 cd frontend
-npm install
-npm run dev
+npm run test
+npm run build
+npm run lint
 ```
-
-El frontend queda en <http://localhost:5173> y consume la API en `http://localhost:8000` (configurable con `VITE_API_URL`). Abre el frontend con `localhost`, no con `127.0.0.1`, para que la cookie de sesión `SameSite=Lax` viaje a la API. La pantalla `/login` usa la autenticación real del backend.
 
 ## Endpoints implementados
 
@@ -98,20 +143,12 @@ El frontend queda en <http://localhost:5173> y consume la API en `http://localho
 
 El detalle de contratos y códigos de respuesta está en Swagger y en las especificaciones de `specs/features/`.
 
-## Pruebas
-
-Desde la raíz del repositorio:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest backend/tests/ -q
-```
-
 ## Estructura
 
 - `backend/app/`: aplicación FastAPI. Módulos `identity`, `tickets`, `assignment` y `sla`, cada uno con capas `domain`, `application`, `infrastructure` e `interface`.
 - `backend/dev_server.py`: arranque local con datos de demostración.
 - `backend/tests/`: pruebas del backend con pytest.
-- `frontend/`: estructura reservada para React + TypeScript.
+- `frontend/`: aplicación React + TypeScript (Vite) de HU-21.
 - `infra/docker-compose.yml`: esqueleto de PostgreSQL.
 - `docs/constitution.md`: principios del proyecto.
 - `specs/`: especificaciones, planes y tareas por historia de usuario.

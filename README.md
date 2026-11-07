@@ -2,7 +2,7 @@
 
 Sistema Help Desk SaaS para registrar, asignar y dar seguimiento a tickets de soporte, con control de identidad y roles.
 
-El backend tiene implementadas las HU-01 a HU-04 (registro e inicio de sesión, tickets, prioridad/estado y asignación). El frontend (HU-21) ya tiene scaffold, pantalla de acceso real y capa de sesión; el armazón y las rutas por rol están en construcción.
+El backend tiene implementadas las HU-01 a HU-04 (registro e inicio de sesión, tickets, prioridad/estado y asignación). El frontend (HU-21) ya tiene scaffold, pantalla de acceso real, capa de sesión y armazón compartido con navegación por rol; las rutas definitivas y los guards están en construcción.
 
 ## Stack
 

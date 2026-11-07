@@ -78,6 +78,11 @@ export const strings = {
     close: 'Cerrar',
     search: 'Buscar',
   },
+  roles: {
+    administrador: 'Administrador',
+    tecnico: 'Técnico',
+    cliente: 'Cliente',
+  },
 } as const
 
 export type Strings = typeof strings

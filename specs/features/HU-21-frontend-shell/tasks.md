@@ -11,7 +11,7 @@ No se modifica el backend.
   - Hecho cuando: `httpClient` usa `credentials: 'include'`, `VITE_API_URL`, maneja 401/404/409/422 y `detail` string/lista; `auth.api` cubre `login`, `me` y `logout`; `AuthContext` valida la sesión al montar, distingue `loading/authenticated/anonymous/error`, limpia en 401 y conserva el nombre del login; tests con `fetch` fake en verde.
 - [x] **T4. Pantalla de acceso.** RF-77
   - Hecho cuando: `/login` muestra email/contraseña, validación, estado de carga y errores 401/422 en español; al éxito guarda la identidad y redirige a la primera ruta permitida; un usuario autenticado que abre `/login` es redirigido; no se guardan contraseñas; tests de validación, credenciales incorrectas y éxito en verde.
-- [ ] **T5. AppShell, Sidebar, Topbar y PageHeader.** RF-70, RF-72, RF-79
+- [x] **T5. AppShell, Sidebar, Topbar y PageHeader.** RF-70, RF-72, RF-79
   - Hecho cuando: el armazón muestra logo, espacio de trabajo, navegación filtrada por rol, sección inferior, pie, buscador con ⌘K/Ctrl+K, campana, avatar/nombre/rol con menú, botón de ayuda y `PageHeader`; el ítem activo usa `aria-current="page"`; tests de render y navegación por rol en verde.
 - [ ] **T6. Routing, guards y 404.** RF-69, RF-71, RF-73
   - Hecho cuando: todas las rutas de RF-69 existen; `RequireAuth` redirige a `/login`; `RequireRole` redirige a la primera ruta permitida con aviso una vez; `*` muestra 404 con enlace de salida; `/cuenta` redirige a `/cuenta/perfil`; tests de visitante, login autenticado, rol denegado y ruta desconocida en verde.

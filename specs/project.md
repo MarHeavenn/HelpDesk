@@ -17,7 +17,7 @@ Aplicación web para gestionar solicitudes de soporte mediante tickets: ciclo de
 - `identity`: usuarios y autenticación (soporta HU-01).
 - `tickets`: creación y consulta de tickets (HU-02), prioridad y estado (HU-03) y asignación de tickets a técnicos (HU-04); núcleo del sistema.
 - `assignment`: políticas futuras de asignación (capacidad, turnos, colas); la asignación de tickets se implementa en `tickets` (D1 de HU-04).
-- `sla`: tiempos de SLA por prioridad y control de cumplimiento (soporta HU-05).
+- `sla`: tiempos de SLA por prioridad, control de cumplimiento y configuración administrable (soporta HU-05 y HU-14).
 
 Detalle en las secciones 3.3 y 4 del documento general.
 
@@ -42,6 +42,9 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-04 (asignar tickets a técnicos): ver `specs/features/HU-04-assignment/` (implementada y validada en `develop`).
 - HU-05 (configurar y controlar SLA por prioridad): ver `specs/features/HU-05-sla/` (implementada en `feature/SLA-por-prioridad`; validada con la suite completa).
 - HU-06 (gestionar información y detalle del ticket): ver `specs/features/HU-06-ticket-detail/` (implementada en `feature/Hu-06-tickets-sla`; validada con la suite completa).
+- HU-10 (alertas SLA): ver `specs/features/HU-10-sla-alerts/` (implementada; cambios sin commit a la espera de PR contra `develop`).
+- HU-14 (configuración de SLA): ver `specs/features/HU-14-sla-config/` (implementada; PR pendiente contra `develop`).
+- HU-07 a HU-09 y HU-11 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
 - HU-07 (registrar seguimiento y comentarios del ticket): ver `specs/features/HU-07-ticket-comments/` (implementada en `feature/Hu-06-tickets-sla`; validada con la suite completa).
 - HU-08 (gestionar ciclo de vida del ticket): ver `specs/features/HU-08-ticket-lifecycle/` (implementada en `feature/Hu-06-tickets-sla`; validada con la suite completa).
 - HU-09 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

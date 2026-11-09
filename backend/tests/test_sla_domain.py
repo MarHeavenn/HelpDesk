@@ -258,3 +258,43 @@ def test_target_minutes_is_preserved_in_the_result():
     sla = calculate_sla(snapshot, TARGET, NOW)
 
     assert sla.target_minutes == TARGET
+
+
+# --- RF-76: objetivo congelado al resolver ---
+
+
+def test_a_resolved_ticket_uses_the_frozen_target_over_the_current_one():
+    snapshot = TicketSlaSnapshot(
+        priority="Media",
+        created_at=NOW - timedelta(minutes=30),
+        resolved_at=NOW,
+        resolved_target_minutes=60,
+    )
+
+    sla = calculate_sla(snapshot, TARGET, NOW)
+
+    assert sla.target_minutes == 60
+    assert sla.due_at == snapshot.created_at + timedelta(minutes=60)
+    assert sla.status == SLA_MET
+
+
+def test_a_resolved_ticket_without_a_frozen_target_uses_the_current_one():
+    snapshot = _snapshot(created_minutes_ago=30, resolved_minutes_ago=0)
+
+    sla = calculate_sla(snapshot, TARGET, NOW)
+
+    assert sla.target_minutes == TARGET
+
+
+def test_an_active_ticket_ignores_the_frozen_target():
+    snapshot = TicketSlaSnapshot(
+        priority="Media",
+        created_at=NOW - timedelta(minutes=30),
+        resolved_target_minutes=60,
+    )
+
+    sla = calculate_sla(snapshot, TARGET, NOW)
+
+    assert sla.target_minutes == TARGET
+    assert sla.due_at == snapshot.created_at + timedelta(minutes=TARGET)
+

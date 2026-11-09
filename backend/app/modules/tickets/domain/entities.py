@@ -213,6 +213,8 @@ class Ticket:
     asignacion ambos campos del tecnico son `None` (RF-35.3).
     `resolved_at` (HU-05) nace vacia y la fija el caso de uso al pasar a
     `Resuelto` o `Cerrado`; es el instante en que se congela el SLA.
+    `resolved_target_minutes` (HU-14) guarda el objetivo aplicado en ese
+    momento y es interno: no forma parte de las respuestas HTTP.
     """
 
     id: str
@@ -227,6 +229,9 @@ class Ticket:
     # Fecha y hora de resolucion (HU-05, RF-46). Vacia mientras el ticket
     # no este `Resuelto` ni `Cerrado`; el SLA se congela en este instante.
     resolved_at: datetime | None = None
+    # Objetivo de SLA aplicado al resolver (HU-14, RF-76). Vacio mientras
+    # el ticket este activo y se limpia al reabrir.
+    resolved_target_minutes: int | None = None
 
 
 @dataclass

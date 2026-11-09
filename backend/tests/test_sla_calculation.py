@@ -1,4 +1,4 @@
-"""HU-05 — Politicas y caso de uso de calculo del SLA (RF-41, RF-42, RF-47).
+"""HU-05 y HU-14 — Politicas y caso de uso de calculo del SLA.
 
 Mapa RF -> test:
 - RF-41: valores iniciales exactos por prioridad y uso del objetivo de la
@@ -7,8 +7,11 @@ Mapa RF -> test:
 - RF-43.1 y RF-47: el vencimiento se calcula desde la creacion, tambien
   despues de un cambio de prioridad.
 - RF-46: al reabrir (sin `resolved_at`) el SLA vuelve a evolucionar.
+- HU-14 RF-76: el calculo usa la configuracion vigente del repositorio en
+  memoria en cada llamada, sin cachearla y sin cambiar los contratos.
 """
 
+import inspect
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -30,10 +33,21 @@ from app.modules.sla.domain.entities import (
     SLA_ON_TIME,
     TicketSlaSnapshot,
 )
+from app.modules.sla.infrastructure.sla_policy_repository import (
+    get_sla_policy_repository,
+)
 from app.modules.sla.interface.contract import get_ticket_sla
 
 NOW = datetime(2026, 11, 2, 12, 0, 0, tzinfo=timezone.utc)
 CREATED = NOW - timedelta(hours=3)
+
+
+@pytest.fixture(autouse=True)
+def reset_sla_policies():
+    """Aisla cada prueba de la configuracion global en memoria (HU-14)."""
+    get_sla_policy_repository().reset()
+    yield
+    get_sla_policy_repository().reset()
 
 
 def _snapshot(priority: str | None, **kwargs) -> TicketSlaSnapshot:
@@ -176,3 +190,76 @@ def test_fresh_ticket_with_priority_is_on_time():
     assert sla.status == SLA_ON_TIME
     assert sla.elapsed_minutes == 0
     assert sla.remaining_minutes == 1440
+
+
+# --- HU-14 RF-76: configuracion vigente del repositorio ---
+
+
+def _replace(priority: str, minutes: int) -> None:
+    """Reemplaza un unico objetivo conservando el resto de la semilla."""
+    targets = dict(DEFAULT_SLA_TARGET_MINUTES)
+    targets[priority] = minutes
+    get_sla_policy_repository().replace(targets)
+
+
+def test_target_minutes_for_reads_the_repository_on_each_call():
+    assert target_minutes_for("Crítica") == 120
+
+    _replace("Crítica", 60)
+    assert target_minutes_for("Crítica") == 60
+
+    # Un segundo cambio se refleja sin cache: se relee en cada llamada.
+    _replace("Crítica", 90)
+    assert target_minutes_for("Crítica") == 90
+
+
+def test_calculation_uses_the_current_configuration():
+    _replace("Crítica", 60)
+    snapshot = TicketSlaSnapshot(priority="Crítica", created_at=NOW)
+
+    sla = calculate_ticket_sla(snapshot, now=NOW)
+
+    assert sla is not None
+    assert sla.target_minutes == 60
+    assert sla.due_at == NOW + timedelta(minutes=60)
+
+
+def test_changing_the_configuration_moves_the_due_date():
+    snapshot = TicketSlaSnapshot(priority="Crítica", created_at=NOW)
+
+    before = calculate_ticket_sla(snapshot, now=NOW)
+    _replace("Crítica", 60)
+    after = calculate_ticket_sla(snapshot, now=NOW)
+
+    assert before is not None and after is not None
+    assert before.due_at - after.due_at == timedelta(minutes=60)
+    assert after.target_minutes == 60
+
+
+def test_contract_and_application_agree_with_a_custom_configuration():
+    _replace("Alta", 180)
+    snapshot = TicketSlaSnapshot(priority="Alta", created_at=CREATED)
+
+    assert get_ticket_sla(snapshot, now=NOW) == calculate_ticket_sla(
+        snapshot, now=NOW
+    )
+    assert get_ticket_sla(snapshot, now=NOW).target_minutes == 180
+
+
+def test_absent_and_unknown_priorities_stay_none_with_a_custom_configuration():
+    _replace("Crítica", 60)
+
+    assert target_minutes_for(None) is None
+    assert target_minutes_for("Urgente") is None
+    assert calculate_ticket_sla(_snapshot(None), now=NOW) is None
+    assert calculate_ticket_sla(_snapshot("Urgente"), now=NOW) is None
+
+
+def test_contract_signatures_are_unchanged():
+    contract = inspect.signature(get_ticket_sla)
+    application = inspect.signature(calculate_ticket_sla)
+
+    assert list(contract.parameters) == ["snapshot", "now"]
+    assert list(application.parameters) == ["snapshot", "now"]
+    assert contract.parameters["now"].default is None
+    assert application.parameters["now"].default is None

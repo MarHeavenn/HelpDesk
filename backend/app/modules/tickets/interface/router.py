@@ -55,6 +55,9 @@ from app.modules.tickets.application.get_ticket import (
     TicketNotFoundError,
     get_ticket_detail,
 )
+from app.modules.tickets.application.list_attention_tickets import (
+    list_attention_tickets,
+)
 from app.modules.tickets.application.list_tickets import list_my_tickets
 from app.modules.tickets.application.reopen_ticket import reopen_ticket
 from app.modules.tickets.application.set_ticket_priority import set_ticket_priority
@@ -114,6 +117,7 @@ def _sla_response(
             priority=ticket.priority,
             created_at=ticket.created_at,
             resolved_at=ticket.resolved_at,
+            resolved_target_minutes=ticket.resolved_target_minutes,
         ),
         now=now,
     )
@@ -413,6 +417,30 @@ def list_tickets_endpoint(
     )
     # Un unico instante de referencia para todo el listado (HU-05).
     now = datetime.now(timezone.utc)
+    return [ticket_summary(ticket, now) for ticket in tickets]
+
+
+@router.get("/requiring-attention", response_model=list[TicketSummaryResponse])
+def list_attention_tickets_endpoint(
+    current: dict = Depends(get_current_user),
+) -> list[TicketSummaryResponse]:
+    """Lista los tickets que requieren atencion por SLA (HU-10, RF-62, RF-63).
+
+    Declarada antes de `GET /{ticket_id}` para que la ruta estatica se case
+    primero y no capture `"requiring-attention"` como un `ticket_id`. El
+    `now` se calcula una sola vez y se comparte entre el filtro y la
+    serializacion (RF-69). Un cliente recibe 404 uniforme; sin sesion
+    valida, `get_current_user` responde 401 antes del handler (RF-63).
+    """
+    now = datetime.now(timezone.utc)
+    try:
+        tickets = list_attention_tickets(
+            actor_role=current["role"],
+            tickets=get_ticket_repository(),
+            now=now,
+        )
+    except TicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [ticket_summary(ticket, now) for ticket in tickets]
 
 

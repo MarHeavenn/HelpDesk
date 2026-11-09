@@ -536,8 +536,12 @@ def test_put_priority_on_closed_ticket_returns_409_without_change_or_record():
     created = _create_ticket()
     _provision_and_login()
 
-    closed = api.put(f"/api/tickets/{created['id']}/status", json={"status": "Cerrado"})
-    assert closed.status_code == 200
+    closed = None
+    for status in ("En progreso", "Resuelto", "Cerrado"):
+        closed = api.put(
+            f"/api/tickets/{created['id']}/status", json={"status": status}
+        )
+        assert closed.status_code == 200, closed.text
     assert closed.json()["status"] == "Cerrado"
     records_before = get_ticket_modification_log().count()
 
@@ -551,7 +555,7 @@ def test_put_priority_on_closed_ticket_returns_409_without_change_or_record():
     stored = get_ticket_repository().find_by_id(created["id"])
     assert stored.status == "Cerrado"
     assert stored.priority is None
-    assert get_ticket_modification_log().count() == records_before == 1
+    assert get_ticket_modification_log().count() == records_before == 3
 
 
 # --- T6 / RF-30: sin sesion valida -> 401 ---

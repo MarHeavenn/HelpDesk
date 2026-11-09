@@ -203,10 +203,12 @@ def _put_assignee(ticket_id, body=NO_BODY, target=api):
 
 
 def _close_ticket(ticket_id, target=api):
-    closed = target.put(
-        f"/api/tickets/{ticket_id}/status", json={"status": "Cerrado"}
-    )
-    assert closed.status_code == 200, closed.text
+    closed = None
+    for status in ("En progreso", "Resuelto", "Cerrado"):
+        closed = target.put(
+            f"/api/tickets/{ticket_id}/status", json={"status": status}
+        )
+        assert closed.status_code == 200, closed.text
     return closed
 
 

@@ -247,6 +247,20 @@ def _put_priority(ticket_id, priority, target=admin_api):
     )
 
 
+_PATH_TO = {
+    "Abierto": [],
+    "En progreso": ["En progreso"],
+    "Resuelto": ["En progreso", "Resuelto"],
+    "Cerrado": ["En progreso", "Resuelto", "Cerrado"],
+}
+
+
+def _advance(ticket_id, target, session=admin_api):
+    for status in _PATH_TO[target]:
+        response = _put_status(ticket_id, status, target=session)
+        assert response.status_code == 200, response.text
+
+
 def _ticket_state(ticket_id):
     stored = get_ticket_repository().find_by_id(ticket_id)
     assert stored is not None
@@ -475,8 +489,9 @@ def test_sweep_assignment_log_records_changes_without_exposing_them():
     assert get_assignment_log().count() == 2
 
     # Ticket cerrado: 409 incluso repitiendo el vigente, sin registro.
+    _advance(created["id"], "Cerrado")
     closed = _put_status(created["id"], "Cerrado")
-    assert closed.status_code == 200
+    assert closed.status_code == 409
     before_rejection = _snapshot(created["id"])
     rejected = _put_assignee(created["id"], {"assignee_id": tech_two.id})
     assert rejected.status_code == 409
@@ -640,7 +655,7 @@ def test_sweep_tickets_assigned_to_me():
     assert _put_assignee(first["id"], {"assignee_id": tech_one.id}).status_code == 200
     assert _put_assignee(second["id"], {"assignee_id": tech_one.id}).status_code == 200
     # Cualquier estado, incluido `Cerrado`, sigue en la lista (RF-36).
-    assert _put_status(second["id"], "Cerrado").status_code == 200
+    _advance(second["id"], "Cerrado")
 
     mine = tech_api.get("/api/assignments/mine")
     assert mine.status_code == 200
@@ -745,7 +760,7 @@ def test_sweep_precedence_table_with_real_sessions():
         _put_assignee(closed_ticket["id"], {"assignee_id": tech.id}).status_code
         == 200
     )
-    assert _put_status(closed_ticket["id"], "Cerrado").status_code == 200
+    _advance(closed_ticket["id"], "Cerrado")
 
     # Cuerpo 404 uniforme de HU-02, identico en todos los intentos.
     unified = client_api.get(f"/api/tickets/{uuid.uuid4()}")
@@ -928,7 +943,7 @@ def test_sweep_no_rejection_uses_400_or_403():
     )
     open_ticket = _create_ticket()
     closed_ticket = _create_ticket()
-    assert _put_status(closed_ticket["id"], "Cerrado").status_code == 200
+    _advance(closed_ticket["id"], "Cerrado")
 
     before = _snapshot(open_ticket["id"], closed_ticket["id"])
     ticket_count = get_ticket_repository().count()

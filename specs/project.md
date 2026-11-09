@@ -43,5 +43,6 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-05 (configurar y controlar SLA por prioridad): ver `specs/features/HU-05-sla/` (implementada en `feature/SLA-por-prioridad`; validada con la suite completa).
 - HU-06 (gestionar información y detalle del ticket): ver `specs/features/HU-06-ticket-detail/` (implementada en `feature/Hu-06-tickets-sla`; validada con la suite completa).
 - HU-07 (registrar seguimiento y comentarios del ticket): ver `specs/features/HU-07-ticket-comments/` (implementada en `feature/Hu-06-tickets-sla`; validada con la suite completa).
-- HU-08 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
+- HU-08 (gestionar ciclo de vida del ticket): ver `specs/features/HU-08-ticket-lifecycle/` (implementada en `feature/Hu-06-tickets-sla`; validada con la suite completa).
+- HU-09 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
 - HU-20 (frontend): ver `specs/features/HU-20-frontend/` (spec, plan y tareas; sin código).

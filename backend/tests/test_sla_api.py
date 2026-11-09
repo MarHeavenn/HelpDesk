@@ -296,6 +296,7 @@ def test_resolution_within_due_freezes_the_sla_as_met():
     _provision(staff_api, "tecnico", "tecnico@ejemplo.com")
     _age_ticket(created["id"], hours=1)
     _set_priority(staff_api, created["id"], "Alta")
+    _set_status(staff_api, created["id"], "En progreso")
 
     resolved = _set_status(staff_api, created["id"], "Resuelto")
 
@@ -314,6 +315,7 @@ def test_resolution_after_due_freezes_the_sla_as_breached():
     _provision(staff_api, "tecnico", "tecnico@ejemplo.com")
     _age_ticket(created["id"], hours=5)
     _set_priority(staff_api, created["id"], "Alta")
+    _set_status(staff_api, created["id"], "En progreso")
 
     resolved = _set_status(staff_api, created["id"], "Resuelto")
 
@@ -327,6 +329,7 @@ def test_resolved_to_closed_keeps_the_frozen_sla():
     _provision(staff_api, "tecnico", "tecnico@ejemplo.com")
     _age_ticket(created["id"], hours=1)
     _set_priority(staff_api, created["id"], "Alta")
+    _set_status(staff_api, created["id"], "En progreso")
     resolved = _set_status(staff_api, created["id"], "Resuelto")
 
     closed = _set_status(staff_api, created["id"], "Cerrado")
@@ -346,9 +349,11 @@ def test_reopening_resumes_the_sla_from_creation():
     _provision(staff_api, "tecnico", "tecnico@ejemplo.com")
     _age_ticket(created["id"], hours=3)
     _set_priority(staff_api, created["id"], "Alta")
+    _set_status(staff_api, created["id"], "En progreso")
     resolved = _set_status(staff_api, created["id"], "Resuelto")
     assert resolved["sla"]["status"] == "cumplido"
 
+    # HU-08: `Resuelto` -> `En progreso` es el retroceso autorizado.
     reopened = _set_status(staff_api, created["id"], "En progreso")
 
     sla = reopened["sla"]

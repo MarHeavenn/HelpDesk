@@ -208,7 +208,11 @@ def test_full_follow_up_flow_from_creation_to_closure():
     assert forbidden.status_code == 404
     assert forbidden.json() == NOT_FOUND_BODY
 
-    # 7. El técnico cierra el ticket: el detalle refleja la resolución.
+    # 7. El técnico resuelve y cierra el ticket: el detalle refleja la resolución.
+    resolved = technician_api.put(
+        f"/api/tickets/{ticket_id}/status", json={"status": "Resuelto"}
+    )
+    assert resolved.status_code == 200, resolved.text
     closed = technician_api.put(
         f"/api/tickets/{ticket_id}/status", json={"status": "Cerrado"}
     )

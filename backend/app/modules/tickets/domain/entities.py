@@ -1,4 +1,4 @@
-"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03, HU-04 y HU-07).
+"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03, HU-04, HU-07 y HU-08).
 
 Cubre RF-12 (validacion de titulo y descripcion), RF-13 (identificador
 opaco con formato UUID) y RF-19 (estado inicial `Abierto`) de HU-02, de
@@ -7,9 +7,10 @@ HU-03: RF-21 (catalogos de prioridades y estados), RF-27.2/RF-27.3
 `TicketModification` del registro de modificaciones), de HU-04:
 RF-34/RF-35.3 (tecnico responsable del ticket, vacio mientras no se
 asigne), RF-37 (entidad `AssignmentRecord` del registro de asignaciones)
-y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion), y de
+y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion), de
 HU-07: RF-62/RF-63 (entidad `TicketComment` y validacion del contenido
-del seguimiento).
+del seguimiento), y de HU-08: RF-71 (flujo del ciclo de vida mediante
+`STATUS_TRANSITIONS`) y RF-77 (`REOPEN_ROLES`, unico rol que reabre).
 
 Reglas:
 - Titulo: obligatorio, tipo cadena de texto, 1-200 code points tras el
@@ -25,11 +26,15 @@ Reglas:
 - Prioridad y estado (HU-03): coincidencia exacta con el catalogo, sin
   recorte, sin normalizar mayusculas ni Unicode. `priority` nace vacia
   (`None`) y todo ticket nuevo nace con `OPEN_STATUS`; la creacion no
-  cambia (RF-27.3). El flujo del ciclo de vida es de HU-08: aqui no se
-  imponen transiciones.
+  cambia (RF-27.3). El flujo del ciclo de vida se define en HU-08 mediante
+  `STATUS_TRANSITIONS` (RF-71); el estado `Cerrado` solo sale por la
+  reapertura autorizada de RF-76.
 - Roles de gestion (RF-24): `MANAGEMENT_ROLES` fija que solo `tecnico` y
   `administrador` pueden fijar prioridad y estado; su aplicacion vive en
   la capa de aplicacion, no en la interfaz.
+- Roles de reapertura (RF-77): `REOPEN_ROLES` fija que solo el
+  `administrador` reabre un ticket `Cerrado`; los demas roles reciben el
+  404 uniforme.
 - Registro (RF-26): `TicketModification` es de solo datos; quien decide
   cuando se registra es el caso de uso (solo cambios efectivos).
 - Tecnico responsable (HU-04): `assignee_id` es el identificador opaco
@@ -59,6 +64,7 @@ DESCRIPTION_MAX_LENGTH = 5000
 COMMENT_MIN_LENGTH = 1
 COMMENT_MAX_LENGTH = 2000
 OPEN_STATUS = "Abierto"
+IN_PROGRESS_STATUS = "En progreso"
 CLOSED_STATUS = "Cerrado"
 RESOLVED_STATUS = "Resuelto"
 
@@ -67,7 +73,17 @@ RESOLVED_STATUSES = frozenset({RESOLVED_STATUS, CLOSED_STATUS})
 
 # Catalogos de HU-03 (RF-21). El orden es el del RF y de la spec.
 PRIORITIES = ("Crítica", "Alta", "Media", "Baja")
-STATUSES = ("Abierto", "En progreso", "Resuelto", "Cerrado")
+STATUSES = (OPEN_STATUS, IN_PROGRESS_STATUS, RESOLVED_STATUS, CLOSED_STATUS)
+
+# Flujo del ciclo de vida (HU-08, RF-71): destinos permitidos por
+# `PUT /api/tickets/{ticket_id}/status`. `Cerrado` no tiene destinos por
+# esa ruta; su unica salida es la reapertura de RF-76.
+STATUS_TRANSITIONS = {
+    OPEN_STATUS: frozenset({IN_PROGRESS_STATUS}),
+    IN_PROGRESS_STATUS: frozenset({RESOLVED_STATUS}),
+    RESOLVED_STATUS: frozenset({CLOSED_STATUS, IN_PROGRESS_STATUS}),
+    CLOSED_STATUS: frozenset(),
+}
 
 # Campos registrables en el registro de modificaciones (RF-26).
 PRIORITY_FIELD = "priority"
@@ -79,6 +95,9 @@ MANAGEMENT_ROLES = frozenset({"tecnico", "administrador"})
 # Roles con permiso de asignacion y reasignacion (RF-38): solo el
 # administrador; los tecnicos no asignan.
 ASSIGNMENT_ROLES = frozenset({"administrador"})
+
+# Roles con permiso de reapertura (HU-08, RF-77): solo el administrador.
+REOPEN_ROLES = frozenset({"administrador"})
 
 
 def _validate_text(raw: object, *, field: str, min_length: int, max_length: int) -> str:
@@ -158,6 +177,16 @@ def validate_status(raw: object) -> str:
     """Devuelve el estado. Lanza ValueError si no es texto o no pertenece
     a `STATUSES` con coincidencia exacta (RF-21, RF-29.3)."""
     return _validate_catalog_value(raw, field="status", catalog=STATUSES)
+
+
+def is_allowed_status_transition(current: str, new: str) -> bool:
+    """True si `current` -> `new` es una transicion del flujo (RF-71).
+
+    Solo cubre las transiciones de `PUT /api/tickets/{ticket_id}/status`;
+    la reapertura de `Cerrado` es una operacion propia (RF-76) y no
+    figura en la tabla.
+    """
+    return new in STATUS_TRANSITIONS.get(current, frozenset())
 
 
 def is_valid_uuid_format(value: object) -> bool:

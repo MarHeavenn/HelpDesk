@@ -1,15 +1,15 @@
-"""T5 (HU-03) — Caso de uso de actualizacion de estado (RF-23, RF-26, RF-29.3).
+"""T5 (HU-03) — Caso de uso de actualizacion de estado (RF-21 a RF-30).
 
 Mapa RF -> test:
 - RF-21/RF-29.3 (catalogo exacto): `test_each_catalog_status_is_accepted`,
-  `test_any_transition_between_open_states_is_allowed`,
+  `test_allowed_transitions_are_accepted`,
   `test_out_of_catalog_status_is_rejected_without_change_or_record`,
   `test_validation_error_keeps_the_domain_message`.
 - RF-29.1 (tipo estricto, en el caso de uso):
   `test_non_text_status_is_rejected_without_change_or_record`.
-- RF-23 (transiciones libres, saltos y retrocesos, y repeticion del valor):
-  `test_any_transition_between_open_states_is_allowed`,
-  `test_jump_from_open_to_closed_is_allowed`,
+- RF-23 (transiciones del flujo, retroceso permitido, saltos rechazados y
+  repeticion del valor): `test_allowed_transitions_are_accepted`,
+  `test_jump_from_open_to_closed_is_rejected`,
   `test_regression_from_resolved_to_in_progress_is_allowed`,
   `test_repeating_the_current_status_does_not_change_or_record`,
   `test_status_change_mutates_the_ticket_stored_in_the_repository`.
@@ -17,14 +17,17 @@ Mapa RF -> test:
   particular `test_default_changed_at_uses_the_system_time_in_utc`,
   `test_successive_status_changes_accumulate_with_previous_values` y
   `test_returned_ticket_does_not_include_the_modification_record`.
+- HU-08 (RF-71/RF-73): `test_allowed_transitions_are_accepted` y
+  `test_disallowed_transitions_are_rejected_without_change_or_record`
+  fijan el flujo estricto y el 409 de transicion invalida.
 
 `Cerrado` como estado de origen no llega a este caso de uso: RF-28 lo
-rechaza antes en `get_modifiable_ticket` (T4). Aqui se verifican todas las
-transiciones desde los estados no cerrados, con cualquier destino.
+rechaza antes en `get_modifiable_ticket` (T4). Aqui se verifican las
+transiciones desde los estados no cerrados y el flujo de HU-08.
 La seccion HTTP (T6) verifica `PUT /api/tickets/{ticket_id}/status` con
 sesiones reales de tecnico y administrador: 200 con el ticket completo
 (con `assignee: null` mientras no haya asignacion, composicion uniforme de
-HU-04), transiciones libres, cuerpo mono-campo estricto y 422, rol sin
+HU-04), transiciones del flujo, cuerpo mono-campo estricto y 422, rol sin
 permisos / inexistente / identificador invalido -> 404 uniforme, cerrado ->
 409 y sin sesion -> 401 (RF-23, RF-29.1, RF-29.2, RF-30; RF-35.5 de HU-04).
 """
@@ -50,9 +53,14 @@ from app.modules.tickets.application.get_modifiable_ticket import (
     TICKET_CLOSED_MESSAGE,
 )
 from app.modules.tickets.application.get_ticket import TICKET_NOT_FOUND_MESSAGE
-from app.modules.tickets.application.update_ticket_status import update_ticket_status
+from app.modules.tickets.application.update_ticket_status import (
+    InvalidStatusTransitionError,
+    update_ticket_status,
+)
 from app.modules.tickets.domain.entities import (
+    IN_PROGRESS_STATUS,
     OPEN_STATUS,
+    RESOLVED_STATUS,
     STATUSES,
     STATUS_FIELD,
     Ticket,
@@ -81,8 +89,6 @@ DETAIL_FIELDS = {
     "resolved_at",
     "requester_id",
 }
-MODIFIABLE_SOURCE_STATUSES = [value for value in STATUSES if value != "Cerrado"]
-
 api = TestClient(app)
 
 
@@ -144,6 +150,25 @@ def _create_ticket(title="Titulo", description="Descripcion"):
     return response.json()
 
 
+def _put_status(ticket_id, status):
+    return api.put(f"/api/tickets/{ticket_id}/status", json={"status": status})
+
+
+_PATH_TO = {
+    "Abierto": [],
+    "En progreso": ["En progreso"],
+    "Resuelto": ["En progreso", "Resuelto"],
+    "Cerrado": ["En progreso", "Resuelto", "Cerrado"],
+}
+
+
+def _advance(ticket_id, target):
+    for status in _PATH_TO[target]:
+        response = _put_status(ticket_id, status)
+        assert response.status_code == 200, response.text
+    assert get_ticket_repository().find_by_id(ticket_id).status == target
+
+
 def _ticket(**overrides) -> Ticket:
     values = {
         "id": str(uuid.uuid4()),
@@ -156,12 +181,19 @@ def _ticket(**overrides) -> Ticket:
     return Ticket(**values)
 
 
-# --- RF-21/RF-23/RF-29.3: catalogo y transiciones libres ---
+# --- RF-21/RF-23/RF-29.3: catalogo y transiciones del flujo ---
 
 
-@pytest.mark.parametrize("status", list(STATUSES))
-def test_each_catalog_status_is_accepted(status):
-    source = OPEN_STATUS if status != OPEN_STATUS else "En progreso"
+@pytest.mark.parametrize(
+    "source,status",
+    [
+        (OPEN_STATUS, IN_PROGRESS_STATUS),
+        (IN_PROGRESS_STATUS, RESOLVED_STATUS),
+        (RESOLVED_STATUS, "Cerrado"),
+        (RESOLVED_STATUS, IN_PROGRESS_STATUS),
+    ],
+)
+def test_each_catalog_status_is_accepted(source, status):
     ticket = _ticket(status=source)
     log = InMemoryTicketModificationLog()
 
@@ -180,34 +212,61 @@ def test_each_catalog_status_is_accepted(status):
     assert record.changed_at == NOW
 
 
-@pytest.mark.parametrize("target", list(STATUSES))
-@pytest.mark.parametrize("source", MODIFIABLE_SOURCE_STATUSES)
-def test_any_transition_between_open_states_is_allowed(source, target):
+@pytest.mark.parametrize(
+    "source,target",
+    [
+        (OPEN_STATUS, IN_PROGRESS_STATUS),
+        (IN_PROGRESS_STATUS, RESOLVED_STATUS),
+        (RESOLVED_STATUS, "Cerrado"),
+        (RESOLVED_STATUS, IN_PROGRESS_STATUS),
+    ],
+)
+def test_allowed_transitions_are_accepted(source, target):
     ticket = _ticket(status=source)
     log = InMemoryTicketModificationLog()
 
     update_ticket_status(ticket, target, "u-admin", log, now=NOW)
 
     assert ticket.status == target
-    if source == target:
-        assert log.count() == 0
-    else:
-        [record] = log.list_by_ticket(ticket.id)
-        assert record.previous_value == source
-        assert record.new_value == target
+    [record] = log.list_by_ticket(ticket.id)
+    assert record.previous_value == source
+    assert record.new_value == target
 
 
-def test_jump_from_open_to_closed_is_allowed():
-    """RF-23: HU-03 no impone secuencia; el salto directo es valido."""
+@pytest.mark.parametrize(
+    "source,target",
+    [
+        (OPEN_STATUS, RESOLVED_STATUS),
+        (OPEN_STATUS, "Cerrado"),
+        (IN_PROGRESS_STATUS, OPEN_STATUS),
+        (IN_PROGRESS_STATUS, "Cerrado"),
+        (RESOLVED_STATUS, OPEN_STATUS),
+    ],
+)
+def test_disallowed_transitions_are_rejected_without_change_or_record(
+    source, target
+):
+    ticket = _ticket(status=source)
+    log = InMemoryTicketModificationLog()
+
+    with pytest.raises(InvalidStatusTransitionError) as exc:
+        update_ticket_status(ticket, target, "u-tech", log, now=NOW)
+
+    assert str(exc.value) == "invalid status transition"
+    assert ticket.status == source
+    assert log.count() == 0
+
+
+def test_jump_from_open_to_closed_is_rejected():
+    """HU-08: el cierre exige pasar por `Resuelto`."""
     ticket = _ticket(status=OPEN_STATUS)
     log = InMemoryTicketModificationLog()
 
-    update_ticket_status(ticket, "Cerrado", "u-tech", log, now=NOW)
+    with pytest.raises(InvalidStatusTransitionError):
+        update_ticket_status(ticket, "Cerrado", "u-tech", log, now=NOW)
 
-    assert ticket.status == "Cerrado"
-    [record] = log.list_by_ticket(ticket.id)
-    assert record.previous_value == OPEN_STATUS
-    assert record.new_value == "Cerrado"
+    assert ticket.status == OPEN_STATUS
+    assert log.count() == 0
 
 
 def test_regression_from_resolved_to_in_progress_is_allowed():
@@ -306,6 +365,7 @@ def test_successive_status_changes_accumulate_with_previous_values():
     update_ticket_status(ticket, "En progreso", "u-tech", log, now=NOW)
     update_ticket_status(ticket, "Resuelto", "u-admin", log, now=NOW)
     update_ticket_status(ticket, "En progreso", "u-tech", log, now=NOW)
+    update_ticket_status(ticket, "Resuelto", "u-tech", log, now=NOW)
     update_ticket_status(ticket, "Cerrado", "u-admin", log, now=NOW)
 
     records = log.list_by_ticket(ticket.id)
@@ -313,9 +373,10 @@ def test_successive_status_changes_accumulate_with_previous_values():
         ("Abierto", "En progreso", "u-tech"),
         ("En progreso", "Resuelto", "u-admin"),
         ("Resuelto", "En progreso", "u-tech"),
-        ("En progreso", "Cerrado", "u-admin"),
+        ("En progreso", "Resuelto", "u-tech"),
+        ("Resuelto", "Cerrado", "u-admin"),
     ]
-    assert log.count() == 4
+    assert log.count() == 5
     assert ticket.status == "Cerrado"
 
 
@@ -343,11 +404,11 @@ def test_status_change_mutates_the_ticket_stored_in_the_repository():
     repo.add(ticket)
     log = InMemoryTicketModificationLog()
 
-    update_ticket_status(ticket, "Resuelto", "u-tech", log, now=NOW)
+    update_ticket_status(ticket, "En progreso", "u-tech", log, now=NOW)
 
     stored = repo.find_by_id(ticket.id)
     assert stored is ticket
-    assert stored.status == "Resuelto"
+    assert stored.status == "En progreso"
     assert stored.priority is None
 
 
@@ -395,10 +456,15 @@ def test_put_status_accepts_each_catalog_value(status):
     _login(requester["email"])
     created = _create_ticket()
     _provision_and_login()
+    if status != OPEN_STATUS:
+        source = {
+            "En progreso": "Abierto",
+            "Resuelto": "En progreso",
+            "Cerrado": "Resuelto",
+        }[status]
+        _advance(created["id"], source)
 
-    response = api.put(
-        f"/api/tickets/{created['id']}/status", json={"status": status}
-    )
+    response = _put_status(created["id"], status)
 
     assert response.status_code == 200
     assert response.json()["status"] == status
@@ -406,32 +472,41 @@ def test_put_status_accepts_each_catalog_value(status):
         # Repetir el estado vigente: 200 sin registro.
         assert get_ticket_modification_log().count() == 0
     else:
-        assert get_ticket_modification_log().list_by_ticket(created["id"])[
-            0
-        ].new_value == status
+        records = get_ticket_modification_log().list_by_ticket(created["id"])
+        assert records[-1].new_value == status
 
 
-def test_put_status_allows_regression_without_sequence_rules():
+def test_put_status_allows_the_resolved_to_in_progress_regression():
+    requester = _register_client()
+    _login(requester["email"])
+    created = _create_ticket()
+    _provision_and_login()
+    _advance(created["id"], "Resuelto")
+
+    regression = _put_status(created["id"], "En progreso")
+
+    assert regression.status_code == 200
+    assert regression.json()["status"] == "En progreso"
+    records = get_ticket_modification_log().list_by_ticket(created["id"])
+    assert [(r.previous_value, r.new_value) for r in records] == [
+        (OPEN_STATUS, "En progreso"),
+        ("En progreso", "Resuelto"),
+        ("Resuelto", "En progreso"),
+    ]
+
+
+def test_put_status_rejects_a_transition_outside_the_flow():
     requester = _register_client()
     _login(requester["email"])
     created = _create_ticket()
     _provision_and_login()
 
-    resolved = api.put(
-        f"/api/tickets/{created['id']}/status", json={"status": "Resuelto"}
-    )
-    regression = api.put(
-        f"/api/tickets/{created['id']}/status", json={"status": "En progreso"}
-    )
+    response = _put_status(created["id"], "Cerrado")
 
-    assert resolved.status_code == 200
-    assert regression.status_code == 200
-    assert regression.json()["status"] == "En progreso"
-    records = get_ticket_modification_log().list_by_ticket(created["id"])
-    assert [(r.previous_value, r.new_value) for r in records] == [
-        (OPEN_STATUS, "Resuelto"),
-        ("Resuelto", "En progreso"),
-    ]
+    assert response.status_code == 409
+    assert response.json() == {"detail": "invalid status transition"}
+    assert get_ticket_repository().find_by_id(created["id"]).status == OPEN_STATUS
+    assert get_ticket_modification_log().count() == 0
 
 
 def test_put_repeated_status_returns_200_without_new_record():
@@ -462,9 +537,8 @@ def test_put_status_keeps_the_current_priority():
     with_priority = api.put(
         f"/api/tickets/{created['id']}/priority", json={"priority": "Alta"}
     )
-    changed = api.put(
-        f"/api/tickets/{created['id']}/status", json={"status": "Resuelto"}
-    )
+    _advance(created["id"], "En progreso")
+    changed = _put_status(created["id"], "Resuelto")
 
     assert with_priority.status_code == 200
     assert changed.status_code == 200
@@ -597,21 +671,20 @@ def test_put_status_on_closed_ticket_returns_409_without_change_or_record():
     created = _create_ticket()
     _provision_and_login()
 
-    closed = api.put(f"/api/tickets/{created['id']}/status", json={"status": "Cerrado"})
+    _advance(created["id"], "Resuelto")
+    closed = _put_status(created["id"], "Cerrado")
     assert closed.status_code == 200
     assert closed.json()["status"] == "Cerrado"
     records_before = get_ticket_modification_log().count()
 
-    response = api.put(
-        f"/api/tickets/{created['id']}/status", json={"status": "Abierto"}
-    )
+    response = _put_status(created["id"], "Abierto")
 
     assert response.status_code == 409
     assert response.status_code not in (400, 403, 422)
     assert response.json() == {"detail": TICKET_CLOSED_MESSAGE}
     stored = get_ticket_repository().find_by_id(created["id"])
     assert stored.status == "Cerrado"
-    assert get_ticket_modification_log().count() == records_before == 1
+    assert get_ticket_modification_log().count() == records_before == 3
 
 
 # --- T6 / RF-30: sin sesion valida -> 401 ---

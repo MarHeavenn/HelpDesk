@@ -110,3 +110,7 @@ Para que esta historia sea verificable antes de que exista la gestión de usuari
 
 ## Dudas abiertas
 Sin dudas abiertas pendientes. Las decisiones derivadas y las incorporadas tras la revisión QA, que fijan roles, códigos, precedencia y comportamientos concretos, están registradas en "Decisiones tomadas" para su revisión.
+
+## Ampliaciones posteriores
+
+- HU-08 (`specs/features/HU-08-ticket-lifecycle/spec.md`, RF-71 a RF-80) define el flujo del ciclo de vida y sustituye la parte de RF-23 que declaraba «sin reglas de secuencia»: solo `Abierto` → `En progreso` → `Resuelto` → `Cerrado`, más `Resuelto` → `En progreso`. La reapertura de `Cerrado` se realiza con `POST /api/tickets/{ticket_id}/reopen`, exclusiva del administrador. El catálogo de RF-21, la autorización de RF-24, el registro de RF-26 y el 409 de RF-28 para el ticket cerrado se mantienen.

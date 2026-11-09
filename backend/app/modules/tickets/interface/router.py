@@ -47,6 +47,10 @@ from app.modules.tickets.application.get_modifiable_ticket import (
     TicketClosedError,
     get_modifiable_ticket,
 )
+from app.modules.tickets.application.get_reopenable_ticket import (
+    TicketNotClosedError,
+    get_reopenable_ticket,
+)
 from app.modules.tickets.application.get_ticket import (
     TicketNotFoundError,
     get_ticket_detail,
@@ -55,8 +59,10 @@ from app.modules.tickets.application.list_attention_tickets import (
     list_attention_tickets,
 )
 from app.modules.tickets.application.list_tickets import list_my_tickets
+from app.modules.tickets.application.reopen_ticket import reopen_ticket
 from app.modules.tickets.application.set_ticket_priority import set_ticket_priority
 from app.modules.tickets.application.update_ticket_status import (
+    InvalidStatusTransitionError,
     update_ticket_status,
 )
 from app.modules.tickets.domain.entities import Ticket
@@ -223,6 +229,29 @@ def _assignable_ticket(
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except TicketClosedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+def _reopenable_ticket(
+    ticket_id: str,
+    current: dict = Depends(get_current_user),
+) -> Ticket:
+    """Resuelve el ticket que el actor puede reabrir (HU-08, RF-77).
+
+    Delega en `get_reopenable_ticket` (solo administrador y solo ticket
+    `Cerrado`) y traduce sus errores a HTTP: 404 uniforme para permiso,
+    formato o existencia; 409 si el ticket no esta cerrado. Al ser una
+    dependencia, `get_current_user` resuelve el 401 antes que todo.
+    """
+    try:
+        return get_reopenable_ticket(
+            ticket_id=ticket_id,
+            actor_role=current["role"],
+            tickets=get_ticket_repository(),
+        )
+    except TicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TicketNotClosedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
@@ -481,11 +510,14 @@ def set_status_endpoint(
     current: dict = Depends(get_current_user),
     payload: SetStatusRequest = Depends(_status_body),
 ) -> TicketResponse:
-    """Actualiza el estado de un ticket (RF-23) o rechaza con 422.
+    """Actualiza el estado de un ticket (HU-03 y HU-08) o rechaza con 409/422.
 
-    Mismas reglas de precedencia y autorizacion que la prioridad. HU-03 no
-    impone secuencia entre estados (RF-23); el ticket cerrado ya se ha
-    rechazado en `_modifiable_ticket` con 409 (RF-28).
+    Mismas reglas de precedencia y autorizacion que la prioridad. HU-08
+    impone el flujo de `STATUS_TRANSITIONS` (RF-71): una transicion no
+    permitida responde 409 `invalid status transition` (RF-73), mientras
+    que un valor fuera del catalogo o un cuerpo invalido responde 422. El
+    ticket cerrado ya se ha rechazado en `_modifiable_ticket` con 409
+    `ticket is closed` (RF-75); su unica salida es `POST /reopen`.
     """
     try:
         updated = update_ticket_status(
@@ -496,6 +528,33 @@ def set_status_endpoint(
         )
     except TicketValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidStatusTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _ticket_response(updated)
+
+
+@router.post(
+    "/{ticket_id}/reopen",
+    response_model=TicketResponse,
+)
+def reopen_ticket_endpoint(
+    ticket: Ticket = Depends(_reopenable_ticket),
+    current: dict = Depends(get_current_user),
+) -> TicketResponse:
+    """Reabre un ticket cerrado como administrador (HU-08, RF-76, RF-77).
+
+    La autorizacion (solo administrador, 404 uniforme) y el estado
+    `Cerrado` (409 `ticket is not closed`) se resuelven en
+    `_reopenable_ticket`. La operacion no requiere cuerpo y devuelve el
+    ticket completo en `Abierto`, con `resolved_at` descartado para que el
+    SLA se reanude (RF-80). Deja el registro `Cerrado` -> `Abierto` con el
+    responsable de la sesion y la fecha del sistema.
+    """
+    updated = reopen_ticket(
+        ticket=ticket,
+        actor_id=current["id"],
+        modifications=get_ticket_modification_log(),
+    )
     return _ticket_response(updated)
 
 

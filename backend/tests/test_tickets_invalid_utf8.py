@@ -68,7 +68,7 @@ INVALID_UTF8_BODIES = {
 
 VALID_BODIES = {
     "priority": {"priority": "Media"},
-    "status": {"status": "Resuelto"},
+    "status": {"status": "En progreso"},
 }
 
 # `raise_server_exceptions=False`: si la aplicacion volviera a lanzar el
@@ -158,8 +158,10 @@ def _put(endpoint, ticket_id, body, target):
 
 
 def _close_ticket(ticket_id, target=admin_api):
-    closed = _put("status", ticket_id, {"status": "Cerrado"}, target)
-    assert closed.status_code == 200, closed.text
+    closed = None
+    for status in ("En progreso", "Resuelto", "Cerrado"):
+        closed = _put("status", ticket_id, {"status": status}, target)
+        assert closed.status_code == 200, closed.text
     return closed
 
 

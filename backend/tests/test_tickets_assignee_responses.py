@@ -365,10 +365,13 @@ def test_reassignment_updates_assignee_everywhere():
     priority = admin_api.put(
         f"/api/tickets/{ticket_id}/priority", json={"priority": "Media"}
     )
+    in_progress = admin_api.put(
+        f"/api/tickets/{ticket_id}/status", json={"status": "En progreso"}
+    )
     status = admin_api.put(
         f"/api/tickets/{ticket_id}/status", json={"status": "Resuelto"}
     )
-    for response in (priority, status):
+    for response in (priority, in_progress, status):
         assert response.status_code == 200
         _assert_technician_assignee(response.json(), second)
 
@@ -428,6 +431,9 @@ def test_no_response_exposes_credentials_role_or_assignment_log():
         client_api.get(f"/api/tickets/{ticket_id}"),
         admin_api.put(
             f"/api/tickets/{ticket_id}/priority", json={"priority": "Alta"}
+        ),
+        admin_api.put(
+            f"/api/tickets/{ticket_id}/status", json={"status": "En progreso"}
         ),
         admin_api.put(
             f"/api/tickets/{ticket_id}/status", json={"status": "Resuelto"}

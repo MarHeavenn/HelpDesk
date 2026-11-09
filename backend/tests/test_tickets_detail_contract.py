@@ -219,6 +219,10 @@ def test_resolved_at_is_set_on_resolution_and_preserved_on_close():
     created = _create_ticket(requester_api).json()
     technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
     technician_api = _login(technician["email"])
+    started = _put(
+        technician_api, created["id"], "status", {"status": "En progreso"}
+    )
+    assert started.status_code == 200, started.text
 
     resolved = _put(
         technician_api, created["id"], "status", {"status": "Resuelto"}
@@ -255,25 +259,46 @@ def test_resolved_at_is_cleared_when_the_ticket_is_reopened():
     requester_api = _login(requester["email"])
     created = _create_ticket(requester_api).json()
     technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
+    admin = _provision("administrador", "Admin Uno", "admin@ejemplo.com")
     technician_api = _login(technician["email"])
+    admin_api = _login(admin["email"])
     _put(technician_api, created["id"], "priority", {"priority": "Media"})
+    _put(technician_api, created["id"], "status", {"status": "En progreso"})
     resolved = _put(
         technician_api, created["id"], "status", {"status": "Resuelto"}
     )
     assert resolved.status_code == 200, resolved.text
     assert resolved.json()["resolved_at"] is not None
 
+    # Retroceso permitido antes del cierre: descarta `resolved_at`.
     reopened = _put(
-        technician_api, created["id"], "status", {"status": "Abierto"}
+        technician_api, created["id"], "status", {"status": "En progreso"}
     )
 
     assert reopened.status_code == 200, reopened.text
     reopened_body = reopened.json()
-    assert reopened_body["status"] == "Abierto"
+    assert reopened_body["status"] == "En progreso"
     assert reopened_body["resolved_at"] is None
     assert reopened_body["sla"] is not None
     detail = requester_api.get(f"/api/tickets/{created['id']}")
     assert detail.json()["resolved_at"] is None
+
+    # Reapertura real de un ticket cerrado: `POST /reopen` (HU-08).
+    _put(technician_api, created["id"], "status", {"status": "Resuelto"})
+    closed = _put(
+        technician_api, created["id"], "status", {"status": "Cerrado"}
+    )
+    assert closed.status_code == 200, closed.text
+    assert closed.json()["resolved_at"] is not None
+
+    actual_reopen = admin_api.post(f"/api/tickets/{created['id']}/reopen")
+
+    assert actual_reopen.status_code == 200, actual_reopen.text
+    assert actual_reopen.json()["status"] == "Abierto"
+    assert actual_reopen.json()["resolved_at"] is None
+    assert requester_api.get(f"/api/tickets/{created['id']}").json()[
+        "resolved_at"
+    ] is None
 
 
 # --- RF-55: misma composicion en todas las respuestas completas ---

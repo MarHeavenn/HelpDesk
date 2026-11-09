@@ -343,10 +343,11 @@ def test_closed_ticket_still_returns_its_comments():
     technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
     technician_api = _login(technician["email"])
     _comment(technician_api, created["id"], "Antes del cierre")
-    closed = technician_api.put(
-        f"/api/tickets/{created['id']}/status", json={"status": "Cerrado"}
-    )
-    assert closed.status_code == 200
+    for status in ("En progreso", "Resuelto", "Cerrado"):
+        closed = technician_api.put(
+            f"/api/tickets/{created['id']}/status", json={"status": status}
+        )
+        assert closed.status_code == 200, closed.text
 
     response = _list(requester_api, created["id"])
 

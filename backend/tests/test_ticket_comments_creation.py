@@ -114,10 +114,11 @@ def _comment(api: TestClient, ticket_id: str, body: str):
 
 
 def _close(api: TestClient, ticket_id: str):
-    response = api.put(
-        f"/api/tickets/{ticket_id}/status", json={"status": "Cerrado"}
-    )
-    assert response.status_code == 200, response.text
+    for status in ("En progreso", "Resuelto", "Cerrado"):
+        response = api.put(
+            f"/api/tickets/{ticket_id}/status", json={"status": status}
+        )
+        assert response.status_code == 200, response.text
 
 
 # --- RF-61: creación por técnico y administrador ---

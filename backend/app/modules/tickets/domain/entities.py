@@ -1,4 +1,4 @@
-"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03, HU-04, HU-07 y HU-08).
+"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03, HU-04, HU-07, HU-08 y HU-09).
 
 Cubre RF-12 (validacion de titulo y descripcion), RF-13 (identificador
 opaco con formato UUID) y RF-19 (estado inicial `Abierto`) de HU-02, de
@@ -9,8 +9,10 @@ RF-34/RF-35.3 (tecnico responsable del ticket, vacio mientras no se
 asigne), RF-37 (entidad `AssignmentRecord` del registro de asignaciones)
 y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion), de
 HU-07: RF-62/RF-63 (entidad `TicketComment` y validacion del contenido
-del seguimiento), y de HU-08: RF-71 (flujo del ciclo de vida mediante
-`STATUS_TRANSITIONS`) y RF-77 (`REOPEN_ROLES`, unico rol que reabre).
+del seguimiento), de HU-08: RF-71 (flujo del ciclo de vida mediante
+`STATUS_TRANSITIONS`) y RF-77 (`REOPEN_ROLES`, unico rol que reabre), y
+de HU-09: RF-82/RF-83 (entidad `TicketHistoryEvent` y acciones del
+historial derivado).
 
 Reglas:
 - Titulo: obligatorio, tipo cadena de texto, 1-200 code points tras el
@@ -88,6 +90,14 @@ STATUS_TRANSITIONS = {
 # Campos registrables en el registro de modificaciones (RF-26).
 PRIORITY_FIELD = "priority"
 STATUS_FIELD = "status"
+
+# Acciones del historial derivado (HU-09, RF-82).
+HISTORY_ACTION_CREATED = "ticket_created"
+HISTORY_ACTION_ASSIGNED = "technician_assigned"
+HISTORY_ACTION_REASSIGNED = "technician_reassigned"
+HISTORY_ACTION_PRIORITY = "priority_changed"
+HISTORY_ACTION_STATUS = "status_changed"
+HISTORY_ACTION_COMMENT = "comment_added"
 
 # Roles con permisos de gestion sobre prioridad y estado (RF-24).
 MANAGEMENT_ROLES = frozenset({"tecnico", "administrador"})
@@ -293,3 +303,27 @@ class TicketComment:
     author_id: str
     body: str
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class TicketHistoryEvent:
+    """Evento del historial derivado de un ticket (HU-09, RF-82, RF-83).
+
+    `action` es una de las constantes `HISTORY_ACTION_*`; `actor_id` el
+    identificador opaco del usuario responsable (nunca un dato del cuerpo);
+    `occurred_at` la fecha y hora del registro de origen. Los campos
+    `previous_value`/`new_value` se usan para prioridad y estado; los
+    identificadores de tecnico anterior y nuevo, para asignaciones; y
+    `comment`, para el contenido del seguimiento. La entidad es de solo
+    datos y de solo lectura: el caso de uso la construye a partir de los
+    registros existentes y no la persiste.
+    """
+
+    action: str
+    actor_id: str
+    occurred_at: datetime
+    previous_value: str | None = None
+    new_value: str | None = None
+    previous_assignee_id: str | None = None
+    new_assignee_id: str | None = None
+    comment: str | None = None

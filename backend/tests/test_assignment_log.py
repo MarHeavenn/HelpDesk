@@ -247,9 +247,13 @@ def test_no_public_route_exposes_the_assignment_log():
     paths = schema["paths"]
     assert paths, "la aplicacion expone rutas"
 
+    history_paths = [
+        path
+        for path in paths
+        if "history" in path.lower() or "historial" in path.lower()
+    ]
+    assert history_paths == ["/api/tickets/{ticket_id}/history"]
     for path in paths:
-        assert "history" not in path.lower()
-        assert "historial" not in path.lower()
         assert "record" not in path.lower()
 
     # Ni forma parte del contrato HTTP: ningun esquema publico lleva sus campos.

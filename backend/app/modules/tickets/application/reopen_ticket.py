@@ -2,8 +2,9 @@
 
 El ticket ya viene resuelto y autorizado por `get_reopenable_ticket`
 (solo administrador y solo en estado `Cerrado`). Aqui solo se muta el
-estado a `Abierto`, se descarta `resolved_at` para que el SLA vuelva a
-evolucionar desde la creacion y se registra la modificacion.
+estado a `Abierto`, se descartan `resolved_at` y el objetivo de SLA
+congelado para que el SLA vuelva a evolucionar desde la creacion con la
+configuracion vigente, y se registra la modificacion.
 
 No toca prioridad, tecnico responsable, solicitante, titulo, descripcion
 ni fecha de creacion. El registro reutiliza `TicketModification`, de modo
@@ -32,15 +33,18 @@ def reopen_ticket(
 ) -> Ticket:
     """Reabre el ticket cerrado y devuelve el ticket en `Abierto`.
 
-    Muta `Ticket.status`, descarta `resolved_at` (RF-80) y anade el
-    registro `Cerrado` -> `Abierto` con el responsable de la sesion y la
-    fecha y hora del sistema (RF-76). El registro no forma parte del
-    ticket devuelto.
+    Muta `Ticket.status`, descarta `resolved_at` y el objetivo de SLA
+    congelado (RF-80, HU-14 RF-76) y anade el registro `Cerrado` ->
+    `Abierto` con el responsable de la sesion y la fecha y hora del sistema
+    (RF-76). El registro no forma parte del ticket devuelto.
     """
     changed_at = now if now is not None else datetime.now(timezone.utc)
     previous_status = ticket.status
     ticket.status = OPEN_STATUS
     ticket.resolved_at = None
+    # HU-14, RF-76: al reabrir se descarta el objetivo congelado para que el
+    # SLA vuelva a derivarse de la configuracion vigente.
+    ticket.resolved_target_minutes = None
     modifications.add(
         TicketModification(
             ticket_id=ticket.id,

@@ -515,13 +515,17 @@ def test_sweep_assignment_log_records_changes_without_exposing_them():
             response, extra_forbidden=(tech_one.email, tech_two.email)
         )
 
-    # Tampoco existe una ruta publica de historial: solo la consulta a cargo.
+    # La unica ruta publica de historial es la de HU-09; el registro de
+    # asignaciones no se expone como log ni como record.
     paths = app.openapi()["paths"]
     assignment_paths = [path for path in paths if "assignment" in path.lower()]
     assert assignment_paths == ["/api/assignments/mine"]
     assert set(paths["/api/tickets/{ticket_id}/assignee"]) == {"put"}
+    assert set(paths["/api/tickets/{ticket_id}/history"]) == {"get"}
     for path in paths:
         if "ticket" not in path.lower() and "assignment" not in path.lower():
+            continue
+        if path == "/api/tickets/{ticket_id}/history":
             continue
         assert not any(
             token in path.lower() for token in ("history", "log", "record")

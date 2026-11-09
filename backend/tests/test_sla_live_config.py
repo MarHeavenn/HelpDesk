@@ -128,6 +128,12 @@ def _set_status(api: TestClient, ticket_id: str, status: str) -> dict:
     return response.json()
 
 
+def _resolve(api: TestClient, ticket_id: str) -> dict:
+    """Recorre el flujo valido de HU-08 hasta `Resuelto`."""
+    _set_status(api, ticket_id, "En progreso")
+    return _set_status(api, ticket_id, "Resuelto")
+
+
 def _put_policies(api: TestClient, body: dict):
     return api.put("/api/sla/policies", json=body)
 
@@ -162,7 +168,7 @@ def test_a_resolved_ticket_keeps_its_sla_when_the_configuration_changes():
     _age_ticket(created["id"], hours=10)
     _set_priority(staff_api, created["id"], "Crítica")
 
-    resolved = _set_status(staff_api, created["id"], "Resuelto")
+    resolved = _resolve(staff_api, created["id"])
     frozen = resolved["sla"]
     assert frozen["target_minutes"] == 120
     assert frozen["status"] == "incumplido"
@@ -187,7 +193,7 @@ def test_a_closed_ticket_keeps_its_sla_when_the_configuration_changes():
     created = _create(client_api)
     _age_ticket(created["id"], hours=30)
     _set_priority(staff_api, created["id"], "Baja")
-    _set_status(staff_api, created["id"], "Resuelto")
+    _resolve(staff_api, created["id"])
 
     closed = _set_status(staff_api, created["id"], "Cerrado")
     frozen = closed["sla"]
@@ -212,7 +218,7 @@ def test_reopening_clears_the_frozen_target_and_derives_from_the_current_configu
     created = _create(client_api)
     _age_ticket(created["id"], hours=10)
     _set_priority(staff_api, created["id"], "Crítica")
-    _set_status(staff_api, created["id"], "Resuelto")
+    _resolve(staff_api, created["id"])
     assert _stored(created["id"]).resolved_target_minutes == 120
 
     changed = _put_policies(
@@ -221,7 +227,10 @@ def test_reopening_clears_the_frozen_target_and_derives_from_the_current_configu
     )
     assert changed.status_code == 200
 
-    reopened = _set_status(staff_api, created["id"], "Abierto")
+    _set_status(staff_api, created["id"], "Cerrado")
+    reopened = admin_api.post(f"/api/tickets/{created['id']}/reopen")
+    assert reopened.status_code == 200, reopened.text
+    reopened = reopened.json()
 
     assert reopened["resolved_at"] is None
     assert reopened["sla"]["target_minutes"] == 30
@@ -239,7 +248,7 @@ def test_changing_the_priority_of_a_resolved_ticket_re_freezes_it_with_the_curre
     created = _create(client_api)
     _age_ticket(created["id"], hours=10)
     _set_priority(staff_api, created["id"], "Crítica")
-    resolved = _set_status(staff_api, created["id"], "Resuelto")
+    resolved = _resolve(staff_api, created["id"])
     assert resolved["sla"]["target_minutes"] == 120
     assert resolved["sla"]["status"] == "incumplido"
 
@@ -412,7 +421,7 @@ def test_configuration_reads_and_writes_do_not_mutate_tickets():
     _set_priority(staff_api, active["id"], "Alta")
     resolved = _create(client_api, title="Resuelto")
     _set_priority(staff_api, resolved["id"], "Media")
-    _set_status(staff_api, resolved["id"], "Resuelto")
+    _resolve(staff_api, resolved["id"])
     before = {
         active["id"]: _ticket_state(active["id"]),
         resolved["id"]: _ticket_state(resolved["id"]),
@@ -445,7 +454,7 @@ def test_the_internal_frozen_target_is_not_exposed_in_the_http_contract():
     _provision(admin_api, "administrador", "admin@ejemplo.com")
     created = _create(client_api)
     _set_priority(staff_api, created["id"], "Crítica")
-    _set_status(staff_api, created["id"], "Resuelto")
+    _resolve(staff_api, created["id"])
 
     detail = _detail(created["id"])
     listing = client_api.get("/api/tickets").json()[0]

@@ -97,6 +97,38 @@ class AssigneeResponse(BaseModel):
     name: str
 
 
+class HistoryUserResponse(BaseModel):
+    """Usuario de un evento de historial (HU-09, RF-83, RF-88).
+
+    Solo identificador opaco y nombre visible. `name` es `None` si el
+    usuario ya no se puede resolver, pero el identificador se conserva para
+    no perder la trazabilidad. Nunca incluye correo, rol ni credenciales.
+    """
+
+    id: str
+    name: str | None
+
+
+class HistoryEventResponse(BaseModel):
+    """Evento del historial de un ticket (HU-09, RF-81, RF-83).
+
+    Todos los campos se serializan siempre; los que no aplican a un tipo de
+    evento van a `null`. `previous_value`/`new_value` describen prioridad y
+    estado; `previous_assignee`/`new_assignee`, asignaciones; y `comment`,
+    el contenido del seguimiento. `occurred_at` va en ISO 8601 con offset
+    UTC, igual que el resto de fechas del contrato.
+    """
+
+    action: str
+    actor: HistoryUserResponse
+    occurred_at: str
+    previous_value: str | None
+    new_value: str | None
+    previous_assignee: HistoryUserResponse | None
+    new_assignee: HistoryUserResponse | None
+    comment: str | None
+
+
 class RequesterResponse(BaseModel):
     """Solicitante de un ticket (HU-06, RF-53).
 

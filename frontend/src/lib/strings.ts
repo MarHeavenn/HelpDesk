@@ -47,10 +47,18 @@ export const strings = {
     openMenu: 'Abrir menú',
     closeMenu: 'Cerrar menú',
     userMenu: 'Menú de usuario',
+    navigationMenu: 'Menú de navegación',
     notifications: 'Notificaciones',
     help: 'Ayuda',
     logout: 'Cerrar sesión',
     profile: 'Mi perfil',
+  },
+  profile: {
+    subtitle: 'Datos de tu sesión',
+    sessionCard: 'Identidad de la sesión',
+    name: 'Nombre',
+    email: 'Correo',
+    role: 'Rol',
   },
   dashboard: {
     title: 'Dashboard',

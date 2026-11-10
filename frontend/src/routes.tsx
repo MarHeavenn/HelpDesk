@@ -8,6 +8,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import PlaceholderPage from '@/pages/PlaceholderPage'
+import ProfilePage from '@/pages/ProfilePage'
 import type { Rol } from '@/types/domain'
 
 const ADMIN_ROLES: readonly Rol[] = ['administrador']
@@ -144,12 +145,7 @@ export default function AppRoutes() {
             }
           />
           <Route path="/cuenta" element={<Navigate to="/cuenta/perfil" replace />} />
-          <Route
-            path="/cuenta/perfil"
-            element={
-              <PlaceholderPage title={strings.routes.titles['/cuenta/perfil']} />
-            }
-          />
+          <Route path="/cuenta/perfil" element={<ProfilePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

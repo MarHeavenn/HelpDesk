@@ -44,8 +44,11 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-06 (gestionar información y detalle del ticket): ver `specs/features/HU-06-ticket-detail/` (implementada y validada en `develop`).
 - HU-07 (registrar seguimiento y comentarios del ticket): ver `specs/features/HU-07-ticket-comments/` (implementada y validada en `develop`).
 - HU-08 (gestionar ciclo de vida del ticket): ver `specs/features/HU-08-ticket-lifecycle/` (implementada y validada en `develop`).
-- HU-09 (registrar historial y trazabilidad del ticket): ver `specs/features/HU-09-ticket-history/` (implementada en `feature/Hu-09-trazabilidad-del-ticket`; validada con la suite completa).
+- HU-09 (registrar historial y trazabilidad del ticket): ver `specs/features/HU-09-ticket-history/` (implementada y validada en `develop`).
 - HU-10 (alertas SLA): ver `specs/features/HU-10-sla-alerts/` (implementada y validada en `develop`).
 - HU-14 (configuración de SLA): ver `specs/features/HU-14-sla-config/` (implementada y validada en `develop`).
-- HU-11 a HU-13 y HU-15 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
-- HU-20 (frontend): ver `specs/features/HU-20-frontend/` (spec, plan y tareas; sin código).
+- HU-11 (dashboard de tickets): ver `specs/features/HU-11-tickets-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-81 a RF-92).
+- HU-12 (dashboard de cumplimiento de SLA): ver `specs/features/HU-12-sla-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-93 a RF-104).
+- HU-20 (frontend del MVP): ver `specs/features/HU-20-frontend/` (spec, plan y tareas aprobadas; sin código).
+- HU-21 (estructura visual y navegación): ver `specs/features/HU-21-frontend-shell/` (spec, plan y tareas aprobadas; RF-69 a RF-80).
+- HU-13 y HU-15 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

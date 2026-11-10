@@ -34,8 +34,8 @@ Fuente de datos: híbrido por vista (API real donde existe; mock «Demo» donde 
   - Hecho cuando: `/tickets` muestra la tabla del ADR-002 con búsqueda debounce, filtros combinables, orden, contador, paginación de 10, query string y estados vacío/error; las acciones de fila abren el detalle mock; tests de filtros, búsqueda, orden, paginación y URL en verde.
 - [ ] **T13. Mis tickets reales.** RF-54
   - Hecho cuando: `/mis-tickets` usa `GET /api/assignments/mine` para técnico y `GET /api/tickets` para admin/cliente; muestra tabla/filtros/orden/paginación; el cliente no ve filtro de técnico ni asignación; estados de carga/vacío/error; tests con `FakeApiClient` por rol en verde.
-- [ ] **T14. Crear ticket real.** RF-55
-  - Hecho cuando: `/tickets/nuevo` valida título 5–120 y descripción ≥ 20, muestra el SLA de la prioridad, crea con `POST /api/tickets`, fija prioridad con `PUT .../priority` si es admin/técnico, guarda la prioridad local si es cliente, muestra toast y redirige a `/mis-tickets`; cancelar con cambios confirma; tests de validación, SLA, alta, prioridad y descarte en verde.
+- [x] **T14. Crear ticket real.** RF-55
+  - Hecho cuando: `/tickets/nuevo` valida título 1–200 y descripción 1–5000 (contrato de HU-02, revisión 2026-11-10), muestra el SLA de la prioridad solo al administrador, crea con `POST /api/tickets`, fija prioridad con `PUT .../priority` si es admin/técnico, avisa en `/mis-tickets` y redirige; cancelar con cambios confirma; **10 pruebas en verde** de validación, SLA, alta, prioridad, error de red y descarte.
 - [ ] **T15. Detalle y acciones de ticket (real y demo).** RF-53
   - Hecho cuando: el modal muestra los campos disponibles según la fuente, permite cambiar prioridad/estado (admin/técnico) y asignar (admin), actualiza la tabla y muestra toast; en tickets reales usa la API y en demo el store; tickets cerrados deshabilitan acciones; tests de apertura, acciones, errores y cierre por ESC en verde.
 - [ ] **T16. Pruebas y cierre del incremento 2.** RF-51 a RF-55, RF-67

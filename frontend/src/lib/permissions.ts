@@ -48,6 +48,19 @@ export function firstAllowedRoute(role: Rol): AppRoute {
   return role === 'cliente' ? '/mis-tickets' : '/'
 }
 
+/**
+ * Solo administrador y técnico pueden fijar la prioridad de un ticket ajeno
+ * (HU-03); el cliente la elige como intención, pero el backend no se la acepta.
+ */
+export function canSetTicketPriority(role: Rol): boolean {
+  return role === 'administrador' || role === 'tecnico'
+}
+
+/** La política de SLA vigente solo es legible por el administrador (HU-14). */
+export function canReadSlaPolicies(role: Rol): boolean {
+  return role === 'administrador'
+}
+
 export type NavIcon =
   | 'dashboard'
   | 'tickets'

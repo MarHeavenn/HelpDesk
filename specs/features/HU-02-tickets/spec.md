@@ -105,3 +105,8 @@ Permitir que un usuario autenticado registre solicitudes de soporte como tickets
 
 ## Dudas abiertas
 Sin dudas abiertas pendientes. Las decisiones que fijan los valores y comportamientos concretos de estos RF están registradas en "Decisiones tomadas".
+
+## Ampliaciones posteriores
+
+- HU-03 (RF-21 a RF-30) añade prioridad y estados modificables; HU-04 (RF-31 a RF-40) añade el técnico asignado y su listado; HU-05 (RF-41 a RF-50) añade el objeto `sla`. Sus contratos amplían las respuestas de esta historia sin alterar sus reglas de creación ni su aislamiento.
+- HU-06 (RF-51 a RF-60, `specs/features/HU-06-ticket-detail/spec.md`) amplía RF-16 y RF-20: el detalle pasa a incluir `requester` (`{id, name, email}`) y `resolved_at`, y los roles de gestión (`tecnico` y `administrador`) pueden consultar el detalle de cualquier ticket. RF-17 se mantiene para los clientes: un cliente sigue recibiendo 404 ante un ticket ajeno, inexistente o con identificador inválido.

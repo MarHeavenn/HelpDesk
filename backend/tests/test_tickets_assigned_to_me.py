@@ -58,7 +58,7 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 PASSWORD = "Secreta123"
 BASE = datetime(2026, 10, 19, 12, 0, 0, tzinfo=timezone.utc)
 # Composicion exacta del resumen (RF-15, RF-35.1, RF-36), con `assignee`.
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 ASSIGNEE_FIELDS = {"id", "name"}
 
 api = TestClient(app)
@@ -477,10 +477,10 @@ def test_reassignment_moves_the_ticket_between_technicians_lists():
     assert get_assignment_log().count() == 2
 
 
-# --- RF-36: el listado y el detalle de HU-02 no cambian ---
+# --- RF-36 y HU-06: el listado propio no cambia; el detalle si es visible ---
 
 
-def test_assigned_tickets_do_not_change_the_hu02_list_or_detail():
+def test_assigned_tickets_do_not_change_the_hu02_list_and_detail_is_visible():
     technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
     requester = _provision("administrador", "Admin Uno", "admin@ejemplo.com")
     technician_client = _login(technician["email"])
@@ -500,8 +500,11 @@ def test_assigned_tickets_do_not_change_the_hu02_list_or_detail():
     detail = technician_client.get(f"/api/tickets/{assigned.id}")
 
     assert listed.status_code == 200
+    # El listado propio sigue mostrando solo los tickets creados.
     assert _ids(listed.json()) == [own.json()["id"]]
-    assert detail.status_code == 404
+    # HU-06: un tecnico si ve el detalle de un ticket existente.
+    assert detail.status_code == 200
+    assert detail.json()["id"] == assigned.id
     # El ticket asignado si aparece en la consulta a cargo.
     assert _ids(
         technician_client.get("/api/assignments/mine").json()

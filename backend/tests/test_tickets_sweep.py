@@ -15,7 +15,8 @@ Mapa RF -> test (en este archivo):
 - RF-15 -> test_sweep_list_summary_composition,
            test_sweep_list_empty_and_unknown_query_params,
            test_sweep_list_order_and_date_ties
-- RF-16 -> test_sweep_detail_composition_without_personal_data
+- RF-16 -> test_sweep_detail_composition_with_requester_and_without_credentials
+  (ampliado por HU-06: el detalle incluye `requester` y `resolved_at`)
 - RF-17 -> test_sweep_not_found_is_unified
 - RF-18 -> test_sweep_no_rejection_uses_400_or_403,
            test_sweep_authentication_precedes_resource_resolution
@@ -68,7 +69,7 @@ RF_MAP = {
         " + test_sweep_list_empty_and_unknown_query_params"
         " + test_sweep_list_order_and_date_ties"
     ),
-    "RF-16": "test_sweep_detail_composition_without_personal_data",
+    "RF-16": "test_sweep_detail_composition_with_requester_and_without_credentials",
     "RF-17": "test_sweep_not_found_is_unified",
     "RF-18": (
         "test_sweep_no_rejection_uses_400_or_403"
@@ -85,10 +86,13 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
+    "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 
 
 @pytest.fixture(autouse=True)
@@ -340,11 +344,11 @@ def test_sweep_list_order_and_date_ties():
     assert tied == {"tie-1", "tie-2"}
 
 
-# --- RF-16: composicion del detalle sin datos personales ---
+# --- HU-06 RF-53 y RF-59: composicion del detalle con el solicitante ---
 
 
-def test_sweep_detail_composition_without_personal_data():
-    _register_and_login()
+def test_sweep_detail_composition_with_requester_and_without_credentials():
+    user = _register_and_login()
     created = _create("Titulo de barrido", "Descripcion de barrido")
 
     response = client.get(f"/api/tickets/{created['id']}")
@@ -356,18 +360,26 @@ def test_sweep_detail_composition_without_personal_data():
     assert body["priority"] is None
     assert body["status"] == OPEN_STATUS
     assert body["assignee"] is None
+    assert body["sla"] is None
+    assert body["resolved_at"] is None
+    assert body["requester"] == {
+        "id": user["id"],
+        "name": "Ana Perez",
+        "email": "ana@ejemplo.com",
+    }
     text = response.text
     assert '"assignee":null' in text
     for forbidden in (
-        '"name"',
-        '"email"',
         '"role"',
         '"password"',
         '"password_hash"',
         '"hash"',
         '"token"',
+        '"session"',
     ):
         assert forbidden not in text
+    assert "$argon2" not in text
+    assert "Secreta123" not in text
 
 
 # --- RF-17: 404 unificado ---

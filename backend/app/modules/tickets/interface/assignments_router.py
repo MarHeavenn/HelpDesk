@@ -9,6 +9,8 @@ consulta desconocidos se ignoran en silencio (sin declarar parametros).
 No muta tickets ni registros.
 """
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 
 from app.modules.identity.interface.dependencies import get_current_user
@@ -33,4 +35,6 @@ def list_my_assigned_tickets_endpoint(
         assignee_id=current["id"],
         tickets=get_ticket_repository(),
     )
-    return [ticket_summary(ticket) for ticket in tickets]
+    # Un unico instante de referencia para todo el listado (HU-05).
+    now = datetime.now(timezone.utc)
+    return [ticket_summary(ticket, now) for ticket in tickets]

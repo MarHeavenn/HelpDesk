@@ -94,7 +94,10 @@ def test_create_ticket_returns_201_with_ticket_payload():
         "priority",
         "status",
         "assignee",
+        "requester",
+        "sla",
         "created_at",
+        "resolved_at",
         "requester_id",
     }
     assert body["title"] == "Titulo de prueba"

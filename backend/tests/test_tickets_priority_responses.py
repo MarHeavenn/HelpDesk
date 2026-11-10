@@ -50,7 +50,7 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 )
 
 PASSWORD = "Secreta123"
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 DETAIL_FIELDS = {
     "id",
     "title",
@@ -58,7 +58,10 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
+    "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
 

@@ -453,12 +453,22 @@ def test_no_public_route_exposes_the_modification_log():
     paths = schema["paths"]
     assert paths, "la aplicacion expone rutas"
 
+    history_paths = [
+        path
+        for path in paths
+        if "history" in path.lower() or "historial" in path.lower()
+    ]
     for path in paths:
         assert "modification" not in path.lower()
-        assert "historial" not in path.lower()
-        assert "history" not in path.lower()
+    assert history_paths == ["/api/tickets/{ticket_id}/history"]
 
-    # Ni forma parte del contrato HTTP: ningun esquema publico lleva sus campos.
+    # Ni forma parte del contrato HTTP: ningun esquema publico lleva sus
+    # campos internos. `previous_value`/`new_value` solo aparecen en el
+    # contrato documentado del historial de HU-09, nunca en el ticket.
     serialized = json.dumps(schema)
-    for field_name in ("changed_at", "previous_value", "actor_id"):
+    for field_name in ("changed_at", "actor_id"):
         assert field_name not in serialized
+    for schema_name in ("TicketResponse", "TicketSummaryResponse"):
+        properties = schema["components"]["schemas"][schema_name]["properties"]
+        assert "previous_value" not in properties
+        assert "new_value" not in properties

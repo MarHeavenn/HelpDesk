@@ -2,62 +2,57 @@
 
 ## Estado actual
 
-- HU-01..HU-04 y TSK-025 en `develop`: backend en memoria + migraciones
-  PostgreSQL idempotentes (8 tablas, 14 tests de integracion). Suite backend:
-  **746 passed, 3 failed** (precedencia 401/404 con cookie invalida).
-- Modulos `identity` y `tickets` con persistencia en memoria; `assignment` y
-  `sla` sin implementar. Casos de uso aun sin PostgreSQL.
-- Specs, planes y tareas aprobados: `HU-21-frontend-shell/`,
-  `HU-11-tickets-dashboard/` y `HU-12-sla-dashboard/` (RF-69..RF-104).
-  Dashboards con endpoints reales; HU-11 admin global / tecnico asignados /
-  cliente 404; HU-12 con 4 estados SLA, umbral 20%, politica 2/4/12/24 h y
-  panel dentro de `/`.
-- HU-21 T1..T6 completas en `feature/HU-21-frontend-shell`: scaffold Vite +
-  React 18 + TS + Tailwind + Router + Query + Vitest; tipos, textos, fechas
-  es-CO y permisos; `httpClient`/`auth.api`/`AuthContext`; `/login` real con
-  validacion, estados y redireccion por rol; `AppShell`, `Sidebar`, `Topbar` y
-  `PageHeader` con navegacion filtrada por rol, menu de usuario, atajo Ctrl+K y
-  `aria-current`; rutas definitivas con `RequireAuth`, `RequireRole`, aviso de
-  acceso denegado, `/cuenta` -> `/cuenta/perfil` y 404 dentro del armazon.
-  Suite frontend: **64 tests en verde**. Contrato de auth verificado contra el
-  backend real (login 200 + cookie HttpOnly SameSite=Lax, `/me` 200, logout
-  204, CORS con credenciales). Siguiente: T7 (drawer movil y accesibilidad).
+- HU-01..HU-10 y HU-14 **mergeadas en `develop`** (backend en memoria).
+- Suite backend sin Docker: **760 passed, 14 skipped**; con Docker: 1154 passed,
+  3 fallos preexistentes de precedencia 401/404 con cookie inválida.
+- `HU-20` con ADR/spec/plan/tareas y sin código. `HU-21` (frontend shell)
+  T1..T6 completas; `HU-11` T1..T8 y `HU-12` T6 completas en sus ramas.
+- HU-11: dashboard real de tickets en `/` (`GET /api/dashboard/tickets`);
+  administrador global, técnico asignados, cliente 404.
+- HU-12: reutilizará el módulo `sla` de HU-05/HU-14 (estados, umbral 20 %,
+  configuración vigente) y añadirá `GET /api/dashboard/sla` + panel en `/`.
+- TSK-025 (PostgreSQL multitenant) mergeada (PR #9); la persistencia de los
+  módulos sigue en memoria.
 
-## Decisiones TSK-025
+## Decisiones clave
 
-- Una BD y un esquema; `company_id` en `users`, `tickets` y `sla_policies`.
-  `ticket_sla` y `ticket_comments` heredan la empresa via `ticket_id`.
-- FK compuestas `(company_id, requester_id/assignee_id) -> users(company_id,id)`.
-- Trigger al crear empresa: SLA 2h/4h/12h/24h. Email unico global; roles
-  `cliente`, `tecnico`, `administrador`. Migraciones propias, sin ORM.
+- HU-09: historial derivado, no persistido; `GET /api/tickets/{id}/history`;
+  admin/técnico, cliente 404; orden determinista; `Cerrado` conserva historial.
+- HU-08: flujo `Abierto` → `En progreso` → `Resuelto` → `Cerrado` y retroceso
+  `Resuelto` → `En progreso`; reapertura solo administrador.
+- HU-07: comentarios `POST/GET /api/tickets/{id}/comments`; cuerpo 1-2000.
+- HU-06: cliente solo sus tickets, staff cualquiera; detalle añade `requester`
+  y `resolved_at`.
+- HU-05/HU-14: SLA 120/240/720/1440 min; `Resuelto`/`Cerrado` congelan
+  `resolved_at`; reabrir reanuda; `GET/PUT /api/sla/policies` solo admin.
+- `sla` no importa `tickets`; `tickets` compone el SLA con `get_ticket_sla`.
 
 ## Entorno local
 
-- `.venv` en la raiz con `backend/requirements.txt`. Arranque del backend:
-  `backend\dev_server.py` (crea admin/tecnico demo; contrasenas por entorno).
-- `infra/.env` (ignorado) con `POSTGRES_PORT=55432`.
-- Migraciones: `.venv\Scripts\python.exe backend\migrations\run.py` con
-  `DATABASE_URL=postgresql://helpdesk:helpdesk_dev@127.0.0.1:55432/helpdesk`.
-- Tests de BD: mismo `DATABASE_URL`; se saltan si no hay PostgreSQL.
-- Frontend: `cd frontend`, `npm install`, `npm run dev` en
-  <http://localhost:5173>, API en `http://localhost:8000`.
+- `.venv` en la raíz; `infra/.env` usa `POSTGRES_PORT=55432` (el 5432 está ocupado).
+- `DATABASE_URL=postgresql://helpdesk:helpdesk_dev@127.0.0.1:55432/helpdesk`;
+  sin él, los tests de BD se saltan.
+- Frontend: `cd frontend`, `npm install`, `npm run dev` en `localhost:5173`.
 
 ## Errores que se deben evitar
 
-- No usar el puerto 5432: hay un PostgreSQL nativo y las conexiones no llegan
-  al contenedor de Docker.
-- No afirmar pruebas no ejecutadas. En PowerShell no existe `tail`.
-- No poner logica de negocio en los HTTP ni tocar tablas de otros modulos.
-- Logout 204 devuelve cuerpo vacio (`b""`), no JSON.
-- `Ticket` (dataclass): campos con default al final.
-- 422 de Pydantic devuelven `detail` lista; los del dominio, string.
-- Un `TestClient` tiene una sola cookie: usar un cliente por rol.
+- No usar el puerto 5432. No afirmar pruebas no ejecutadas. En PowerShell no
+  existe `tail`. `codegraph` solo vía `cmd /c`.
+- No poner lógica de negocio en los HTTP ni tocar tablas de otros módulos.
+- Logout 204 devuelve cuerpo vacío. `Ticket` y `TicketSlaSnapshot`: defaults
+  al final. 422 de Pydantic: `detail` lista; del dominio: `detail` cadena.
+- Un `TestClient` tiene una sola cookie: uno por rol.
+- Tests de contrato comparan el conjunto exacto de campos; envejecer tickets
+  mutando `created_at` (nunca dormir).
+- La configuración de SLA es un singleton: `reset()` en fixtures `autouse`.
+- Al añadir una ruta, revisar los barridos que afirman su ausencia.
 - Vitest sin `globals`: registrar `cleanup()` de RTL en `tests/setup.ts`.
 - Abrir el frontend en `localhost:5173`, no `127.0.0.1`, por la cookie.
 
-## Proximos pasos
+## Próximos pasos
 
+- Sincronizar HU-11 y HU-12 con `develop` y abrir PRs contra `develop`.
 - HU-21 T7..T10: drawer, marcadores, logout y cierre.
-- HU-11 y HU-12: endpoints reales `GET /api/dashboard/tickets` y `/sla`.
-- Integrar los modulos con PostgreSQL en una tarea aparte.
-- PR de `feature/HU-21-frontend-shell` contra `develop`.
+- HU-12: contrato de tickets, agregación, endpoint y panel de SLA.
+- Integrar los módulos con PostgreSQL en una tarea aparte.
+- Revisar los 3 tests fallidos preexistentes de precedencia 401/404.

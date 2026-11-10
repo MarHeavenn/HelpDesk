@@ -213,8 +213,10 @@ def _put(endpoint, ticket_id, body=NO_BODY, target=api):
 
 
 def _close_ticket(ticket_id, target=api):
-    closed = _put("status", ticket_id, {"status": "Cerrado"}, target=target)
-    assert closed.status_code == 200
+    closed = None
+    for status in ("En progreso", "Resuelto", "Cerrado"):
+        closed = _put("status", ticket_id, {"status": status}, target=target)
+        assert closed.status_code == 200, closed.text
     return closed
 
 
@@ -481,7 +483,7 @@ def test_no_session_returns_401_on_a_closed_ticket_even_with_invalid_body(
 
     before = _ticket_state(created["id"])
     records_before = _record_count(created["id"])
-    assert records_before == 1
+    assert records_before == 3
 
     for body in (
         VALID_BODIES[endpoint],
@@ -651,7 +653,7 @@ def test_closed_ticket_returns_409_for_any_input_including_current_value(
     _close_ticket(created["id"], target=other_api)
 
     records_before = _record_count(created["id"])
-    assert records_before == 2
+    assert records_before == 4
     before = _ticket_state(created["id"])
 
     current_body = {

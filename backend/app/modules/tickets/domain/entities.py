@@ -1,13 +1,18 @@
-"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03 y HU-04).
+"""Entidades y reglas de dominio del modulo tickets (HU-02, HU-03, HU-04, HU-07, HU-08 y HU-09).
 
 Cubre RF-12 (validacion de titulo y descripcion), RF-13 (identificador
 opaco con formato UUID) y RF-19 (estado inicial `Abierto`) de HU-02, de
 HU-03: RF-21 (catalogos de prioridades y estados), RF-27.2/RF-27.3
 (`priority` del ticket, vacia mientras no se fije) y RF-26 (entidad
-`TicketModification` del registro de modificaciones), y de HU-04:
+`TicketModification` del registro de modificaciones), de HU-04:
 RF-34/RF-35.3 (tecnico responsable del ticket, vacio mientras no se
 asigne), RF-37 (entidad `AssignmentRecord` del registro de asignaciones)
-y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion).
+y RF-38 (`ASSIGNMENT_ROLES`, unico rol con permiso de asignacion), de
+HU-07: RF-62/RF-63 (entidad `TicketComment` y validacion del contenido
+del seguimiento), de HU-08: RF-71 (flujo del ciclo de vida mediante
+`STATUS_TRANSITIONS`) y RF-77 (`REOPEN_ROLES`, unico rol que reabre), y
+de HU-09: RF-82/RF-83 (entidad `TicketHistoryEvent` y acciones del
+historial derivado).
 
 Reglas:
 - Titulo: obligatorio, tipo cadena de texto, 1-200 code points tras el
@@ -23,11 +28,15 @@ Reglas:
 - Prioridad y estado (HU-03): coincidencia exacta con el catalogo, sin
   recorte, sin normalizar mayusculas ni Unicode. `priority` nace vacia
   (`None`) y todo ticket nuevo nace con `OPEN_STATUS`; la creacion no
-  cambia (RF-27.3). El flujo del ciclo de vida es de HU-08: aqui no se
-  imponen transiciones.
+  cambia (RF-27.3). El flujo del ciclo de vida se define en HU-08 mediante
+  `STATUS_TRANSITIONS` (RF-71); el estado `Cerrado` solo sale por la
+  reapertura autorizada de RF-76.
 - Roles de gestion (RF-24): `MANAGEMENT_ROLES` fija que solo `tecnico` y
   `administrador` pueden fijar prioridad y estado; su aplicacion vive en
   la capa de aplicacion, no en la interfaz.
+- Roles de reapertura (RF-77): `REOPEN_ROLES` fija que solo el
+  `administrador` reabre un ticket `Cerrado`; los demas roles reciben el
+  404 uniforme.
 - Registro (RF-26): `TicketModification` es de solo datos; quien decide
   cuando se registra es el caso de uso (solo cambios efectivos).
 - Tecnico responsable (HU-04): `assignee_id` es el identificador opaco
@@ -54,16 +63,41 @@ TITLE_MIN_LENGTH = 1
 TITLE_MAX_LENGTH = 200
 DESCRIPTION_MIN_LENGTH = 1
 DESCRIPTION_MAX_LENGTH = 5000
+COMMENT_MIN_LENGTH = 1
+COMMENT_MAX_LENGTH = 2000
 OPEN_STATUS = "Abierto"
+IN_PROGRESS_STATUS = "En progreso"
 CLOSED_STATUS = "Cerrado"
+RESOLVED_STATUS = "Resuelto"
+
+# Estados que congelan el SLA del ticket (HU-05, RF-46).
+RESOLVED_STATUSES = frozenset({RESOLVED_STATUS, CLOSED_STATUS})
 
 # Catalogos de HU-03 (RF-21). El orden es el del RF y de la spec.
 PRIORITIES = ("Crítica", "Alta", "Media", "Baja")
-STATUSES = ("Abierto", "En progreso", "Resuelto", "Cerrado")
+STATUSES = (OPEN_STATUS, IN_PROGRESS_STATUS, RESOLVED_STATUS, CLOSED_STATUS)
+
+# Flujo del ciclo de vida (HU-08, RF-71): destinos permitidos por
+# `PUT /api/tickets/{ticket_id}/status`. `Cerrado` no tiene destinos por
+# esa ruta; su unica salida es la reapertura de RF-76.
+STATUS_TRANSITIONS = {
+    OPEN_STATUS: frozenset({IN_PROGRESS_STATUS}),
+    IN_PROGRESS_STATUS: frozenset({RESOLVED_STATUS}),
+    RESOLVED_STATUS: frozenset({CLOSED_STATUS, IN_PROGRESS_STATUS}),
+    CLOSED_STATUS: frozenset(),
+}
 
 # Campos registrables en el registro de modificaciones (RF-26).
 PRIORITY_FIELD = "priority"
 STATUS_FIELD = "status"
+
+# Acciones del historial derivado (HU-09, RF-82).
+HISTORY_ACTION_CREATED = "ticket_created"
+HISTORY_ACTION_ASSIGNED = "technician_assigned"
+HISTORY_ACTION_REASSIGNED = "technician_reassigned"
+HISTORY_ACTION_PRIORITY = "priority_changed"
+HISTORY_ACTION_STATUS = "status_changed"
+HISTORY_ACTION_COMMENT = "comment_added"
 
 # Roles con permisos de gestion sobre prioridad y estado (RF-24).
 MANAGEMENT_ROLES = frozenset({"tecnico", "administrador"})
@@ -71,6 +105,9 @@ MANAGEMENT_ROLES = frozenset({"tecnico", "administrador"})
 # Roles con permiso de asignacion y reasignacion (RF-38): solo el
 # administrador; los tecnicos no asignan.
 ASSIGNMENT_ROLES = frozenset({"administrador"})
+
+# Roles con permiso de reapertura (HU-08, RF-77): solo el administrador.
+REOPEN_ROLES = frozenset({"administrador"})
 
 
 def _validate_text(raw: object, *, field: str, min_length: int, max_length: int) -> str:
@@ -110,6 +147,20 @@ def validate_description(raw: object) -> str:
     )
 
 
+def validate_comment_body(raw: object) -> str:
+    """Devuelve el cuerpo del comentario recortado (HU-07, RF-62).
+
+    Exige texto estricto y 1-2000 code points tras el recorte. El valor
+    devuelto es el que debe almacenarse y exponerse.
+    """
+    return _validate_text(
+        raw,
+        field="body",
+        min_length=COMMENT_MIN_LENGTH,
+        max_length=COMMENT_MAX_LENGTH,
+    )
+
+
 def _validate_catalog_value(
     raw: object, *, field: str, catalog: tuple[str, ...]
 ) -> str:
@@ -138,6 +189,16 @@ def validate_status(raw: object) -> str:
     return _validate_catalog_value(raw, field="status", catalog=STATUSES)
 
 
+def is_allowed_status_transition(current: str, new: str) -> bool:
+    """True si `current` -> `new` es una transicion del flujo (RF-71).
+
+    Solo cubre las transiciones de `PUT /api/tickets/{ticket_id}/status`;
+    la reapertura de `Cerrado` es una operacion propia (RF-76) y no
+    figura en la tabla.
+    """
+    return new in STATUS_TRANSITIONS.get(current, frozenset())
+
+
 def is_valid_uuid_format(value: object) -> bool:
     """True si `value` es una cadena con formato UUID valido (RF-13, RF-17)."""
     if not isinstance(value, str):
@@ -160,6 +221,10 @@ class Ticket:
     (`assignee_id`/`assignee_name`) nace vacio mientras el ticket no se
     asigne (RF-34); los campos con valor por defecto van al final. Sin
     asignacion ambos campos del tecnico son `None` (RF-35.3).
+    `resolved_at` (HU-05) nace vacia y la fija el caso de uso al pasar a
+    `Resuelto` o `Cerrado`; es el instante en que se congela el SLA.
+    `resolved_target_minutes` (HU-14) guarda el objetivo aplicado en ese
+    momento y es interno: no forma parte de las respuestas HTTP.
     """
 
     id: str
@@ -171,6 +236,12 @@ class Ticket:
     status: str = OPEN_STATUS
     assignee_id: str | None = None
     assignee_name: str | None = None
+    # Fecha y hora de resolucion (HU-05, RF-46). Vacia mientras el ticket
+    # no este `Resuelto` ni `Cerrado`; el SLA se congela en este instante.
+    resolved_at: datetime | None = None
+    # Objetivo de SLA aplicado al resolver (HU-14, RF-76). Vacio mientras
+    # el ticket este activo y se limpia al reabrir.
+    resolved_target_minutes: int | None = None
 
 
 @dataclass
@@ -214,3 +285,45 @@ class AssignmentRecord:
     new_assignee_id: str
     actor_id: str
     assigned_at: datetime
+
+
+@dataclass
+class TicketComment:
+    """Comentario de seguimiento de un ticket (HU-07, RF-61, RF-63).
+
+    `id` es un UUID opaco, `ticket_id` el ticket al que pertenece,
+    `author_id` el identificador opaco del usuario autenticado que lo
+    registro (nunca un dato del cuerpo) y `body` el contenido ya recortado
+    y validado. `created_at` lo genera el sistema; los empates no fijan
+    un orden por identificador, sino que conservan el orden de registro.
+    """
+
+    id: str
+    ticket_id: str
+    author_id: str
+    body: str
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class TicketHistoryEvent:
+    """Evento del historial derivado de un ticket (HU-09, RF-82, RF-83).
+
+    `action` es una de las constantes `HISTORY_ACTION_*`; `actor_id` el
+    identificador opaco del usuario responsable (nunca un dato del cuerpo);
+    `occurred_at` la fecha y hora del registro de origen. Los campos
+    `previous_value`/`new_value` se usan para prioridad y estado; los
+    identificadores de tecnico anterior y nuevo, para asignaciones; y
+    `comment`, para el contenido del seguimiento. La entidad es de solo
+    datos y de solo lectura: el caso de uso la construye a partir de los
+    registros existentes y no la persiste.
+    """
+
+    action: str
+    actor_id: str
+    occurred_at: datetime
+    previous_value: str | None = None
+    new_value: str | None = None
+    previous_assignee_id: str | None = None
+    new_assignee_id: str | None = None
+    comment: str | None = None

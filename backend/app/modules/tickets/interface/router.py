@@ -20,6 +20,7 @@ cerrado.
 
 import json
 from collections.abc import Callable, Coroutine
+from datetime import datetime, timezone
 from email.message import Message
 from typing import Any, TypeVar
 
@@ -31,6 +32,9 @@ from app.modules.identity.interface.dependencies import get_current_user
 from app.modules.identity.interface.technicians_contract import (
     get_technician_summary,
 )
+from app.modules.identity.interface.users_contract import get_user_summary
+from app.modules.sla.domain.entities import TicketSlaSnapshot
+from app.modules.sla.interface.contract import get_ticket_sla
 from app.modules.tickets.application.assign_ticket import assign_ticket
 from app.modules.tickets.application.create_ticket import (
     TicketValidationError,
@@ -43,13 +47,22 @@ from app.modules.tickets.application.get_modifiable_ticket import (
     TicketClosedError,
     get_modifiable_ticket,
 )
+from app.modules.tickets.application.get_reopenable_ticket import (
+    TicketNotClosedError,
+    get_reopenable_ticket,
+)
 from app.modules.tickets.application.get_ticket import (
     TicketNotFoundError,
-    get_my_ticket,
+    get_ticket_detail,
+)
+from app.modules.tickets.application.list_attention_tickets import (
+    list_attention_tickets,
 )
 from app.modules.tickets.application.list_tickets import list_my_tickets
+from app.modules.tickets.application.reopen_ticket import reopen_ticket
 from app.modules.tickets.application.set_ticket_priority import set_ticket_priority
 from app.modules.tickets.application.update_ticket_status import (
+    InvalidStatusTransitionError,
     update_ticket_status,
 )
 from app.modules.tickets.domain.entities import Ticket
@@ -65,9 +78,11 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 from app.modules.tickets.interface.schemas import (
     AssigneeResponse,
     CreateTicketRequest,
+    RequesterResponse,
     SetAssigneeRequest,
     SetPriorityRequest,
     SetStatusRequest,
+    SlaResponse,
     TicketResponse,
     TicketSummaryResponse,
 )
@@ -87,7 +102,55 @@ def _assignee_response(ticket: Ticket) -> AssigneeResponse | None:
     return AssigneeResponse(id=ticket.assignee_id, name=ticket.assignee_name)
 
 
-def _ticket_response(ticket: Ticket) -> TicketResponse:
+def _sla_response(
+    ticket: Ticket, now: datetime | None = None
+) -> SlaResponse | None:
+    """Compone el SLA del ticket o `None` si aun no tiene prioridad.
+
+    Delega en el contrato de `sla` con los datos que ese modulo necesita
+    (prioridad, creacion y resolucion), sin que `sla` conozca `Ticket`
+    (HU-05, RF-42, RF-44). `now` permite que un listado use un unico
+    instante de referencia; si falta, el contrato usa el reloj del sistema.
+    """
+    sla = get_ticket_sla(
+        TicketSlaSnapshot(
+            priority=ticket.priority,
+            created_at=ticket.created_at,
+            resolved_at=ticket.resolved_at,
+            resolved_target_minutes=ticket.resolved_target_minutes,
+        ),
+        now=now,
+    )
+    if sla is None:
+        return None
+    return SlaResponse(
+        target_minutes=sla.target_minutes,
+        started_at=sla.started_at.isoformat(),
+        due_at=sla.due_at.isoformat(),
+        elapsed_minutes=sla.elapsed_minutes,
+        remaining_minutes=sla.remaining_minutes,
+        status=sla.status,
+        near_due=sla.near_due,
+        breached=sla.breached,
+    )
+
+
+def _requester_response(ticket: Ticket) -> RequesterResponse | None:
+    """Compone la vista del solicitante o `None` si no se puede resolver.
+
+    Delegado al contrato de `identity` (HU-06, RF-53): `tickets` no accede
+    al repositorio de usuarios ni expone rol, credenciales o hash. Un
+    solicitante inexistente devuelve `None` sin romper el detalle.
+    """
+    user = get_user_summary(ticket.requester_id)
+    if user is None:
+        return None
+    return RequesterResponse(id=user.id, name=user.name, email=user.email)
+
+
+def _ticket_response(
+    ticket: Ticket, now: datetime | None = None
+) -> TicketResponse:
     """Serializa el ticket completo (fecha con offset UTC y microsegundos)."""
     return TicketResponse(
         id=ticket.id,
@@ -96,12 +159,21 @@ def _ticket_response(ticket: Ticket) -> TicketResponse:
         priority=ticket.priority,
         status=ticket.status,
         assignee=_assignee_response(ticket),
+        requester=_requester_response(ticket),
+        sla=_sla_response(ticket, now),
         created_at=ticket.created_at.isoformat(),
+        resolved_at=(
+            ticket.resolved_at.isoformat()
+            if ticket.resolved_at is not None
+            else None
+        ),
         requester_id=ticket.requester_id,
     )
 
 
-def ticket_summary(ticket: Ticket) -> TicketSummaryResponse:
+def ticket_summary(
+    ticket: Ticket, now: datetime | None = None
+) -> TicketSummaryResponse:
     """Serializa el resumen del listado (sin descripcion, RF-15, RF-35.1)."""
     return TicketSummaryResponse(
         id=ticket.id,
@@ -109,6 +181,7 @@ def ticket_summary(ticket: Ticket) -> TicketSummaryResponse:
         priority=ticket.priority,
         status=ticket.status,
         assignee=_assignee_response(ticket),
+        sla=_sla_response(ticket, now),
         created_at=ticket.created_at.isoformat(),
     )
 
@@ -156,6 +229,29 @@ def _assignable_ticket(
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except TicketClosedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+def _reopenable_ticket(
+    ticket_id: str,
+    current: dict = Depends(get_current_user),
+) -> Ticket:
+    """Resuelve el ticket que el actor puede reabrir (HU-08, RF-77).
+
+    Delega en `get_reopenable_ticket` (solo administrador y solo ticket
+    `Cerrado`) y traduce sus errores a HTTP: 404 uniforme para permiso,
+    formato o existencia; 409 si el ticket no esta cerrado. Al ser una
+    dependencia, `get_current_user` resuelve el 401 antes que todo.
+    """
+    try:
+        return get_reopenable_ticket(
+            ticket_id=ticket_id,
+            actor_role=current["role"],
+            tickets=get_ticket_repository(),
+        )
+    except TicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TicketNotClosedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
@@ -319,7 +415,33 @@ def list_tickets_endpoint(
         requester_id=current["id"],
         tickets=get_ticket_repository(),
     )
-    return [ticket_summary(ticket) for ticket in tickets]
+    # Un unico instante de referencia para todo el listado (HU-05).
+    now = datetime.now(timezone.utc)
+    return [ticket_summary(ticket, now) for ticket in tickets]
+
+
+@router.get("/requiring-attention", response_model=list[TicketSummaryResponse])
+def list_attention_tickets_endpoint(
+    current: dict = Depends(get_current_user),
+) -> list[TicketSummaryResponse]:
+    """Lista los tickets que requieren atencion por SLA (HU-10, RF-62, RF-63).
+
+    Declarada antes de `GET /{ticket_id}` para que la ruta estatica se case
+    primero y no capture `"requiring-attention"` como un `ticket_id`. El
+    `now` se calcula una sola vez y se comparte entre el filtro y la
+    serializacion (RF-69). Un cliente recibe 404 uniforme; sin sesion
+    valida, `get_current_user` responde 401 antes del handler (RF-63).
+    """
+    now = datetime.now(timezone.utc)
+    try:
+        tickets = list_attention_tickets(
+            actor_role=current["role"],
+            tickets=get_ticket_repository(),
+            now=now,
+        )
+    except TicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return [ticket_summary(ticket, now) for ticket in tickets]
 
 
 @router.get("/{ticket_id}", response_model=TicketResponse)
@@ -327,18 +449,20 @@ def get_ticket_endpoint(
     ticket_id: str,
     current: dict = Depends(get_current_user),
 ) -> TicketResponse:
-    """Detalle de un ticket propio (RF-16, RF-17).
+    """Detalle de un ticket visible para el actor (HU-02 y HU-06).
 
     `ticket_id` se declara como `str` (no `uuid.UUID`) para que un
-    identificador mal formado no devuelva 422 de FastAPI: el formato y la
-    propiedad se resuelven en la logica y se traducen aqui a 404. Sin
-    sesion valida, `get_current_user` responde 401 antes del handler
-    (precedencia 401 > 404, RF-18).
+    identificador mal formado no devuelva 422 de FastAPI: el formato, la
+    existencia y la visibilidad se resuelven en la logica y se traducen
+    aqui a 404. Un cliente solo ve sus tickets (HU-02); un tecnico o un
+    administrador ve cualquiera (HU-06, RF-51, RF-52). Sin sesion valida,
+    `get_current_user` responde 401 antes del handler (RF-57).
     """
     try:
-        ticket = get_my_ticket(
+        ticket = get_ticket_detail(
             ticket_id=ticket_id,
-            requester_id=current["id"],
+            actor_id=current["id"],
+            actor_role=current["role"],
             tickets=get_ticket_repository(),
         )
     except TicketNotFoundError as exc:
@@ -386,11 +510,14 @@ def set_status_endpoint(
     current: dict = Depends(get_current_user),
     payload: SetStatusRequest = Depends(_status_body),
 ) -> TicketResponse:
-    """Actualiza el estado de un ticket (RF-23) o rechaza con 422.
+    """Actualiza el estado de un ticket (HU-03 y HU-08) o rechaza con 409/422.
 
-    Mismas reglas de precedencia y autorizacion que la prioridad. HU-03 no
-    impone secuencia entre estados (RF-23); el ticket cerrado ya se ha
-    rechazado en `_modifiable_ticket` con 409 (RF-28).
+    Mismas reglas de precedencia y autorizacion que la prioridad. HU-08
+    impone el flujo de `STATUS_TRANSITIONS` (RF-71): una transicion no
+    permitida responde 409 `invalid status transition` (RF-73), mientras
+    que un valor fuera del catalogo o un cuerpo invalido responde 422. El
+    ticket cerrado ya se ha rechazado en `_modifiable_ticket` con 409
+    `ticket is closed` (RF-75); su unica salida es `POST /reopen`.
     """
     try:
         updated = update_ticket_status(
@@ -401,6 +528,33 @@ def set_status_endpoint(
         )
     except TicketValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidStatusTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _ticket_response(updated)
+
+
+@router.post(
+    "/{ticket_id}/reopen",
+    response_model=TicketResponse,
+)
+def reopen_ticket_endpoint(
+    ticket: Ticket = Depends(_reopenable_ticket),
+    current: dict = Depends(get_current_user),
+) -> TicketResponse:
+    """Reabre un ticket cerrado como administrador (HU-08, RF-76, RF-77).
+
+    La autorizacion (solo administrador, 404 uniforme) y el estado
+    `Cerrado` (409 `ticket is not closed`) se resuelven en
+    `_reopenable_ticket`. La operacion no requiere cuerpo y devuelve el
+    ticket completo en `Abierto`, con `resolved_at` descartado para que el
+    SLA se reanude (RF-80). Deja el registro `Cerrado` -> `Abierto` con el
+    responsable de la sesion y la fecha del sistema.
+    """
+    updated = reopen_ticket(
+        ticket=ticket,
+        actor_id=current["id"],
+        modifications=get_ticket_modification_log(),
+    )
     return _ticket_response(updated)
 
 

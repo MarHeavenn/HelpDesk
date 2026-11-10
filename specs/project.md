@@ -17,7 +17,7 @@ Aplicación web para gestionar solicitudes de soporte mediante tickets: ciclo de
 - `identity`: usuarios y autenticación (soporta HU-01).
 - `tickets`: creación y consulta de tickets (HU-02), prioridad y estado (HU-03) y asignación de tickets a técnicos (HU-04); núcleo del sistema.
 - `assignment`: políticas futuras de asignación (capacidad, turnos, colas); la asignación de tickets se implementa en `tickets` (D1 de HU-04).
-- `sla`: tiempos de SLA por prioridad y control de cumplimiento (soporta HU-05).
+- `sla`: tiempos de SLA por prioridad, control de cumplimiento y configuración administrable (soporta HU-05 y HU-14).
 
 Detalle en las secciones 3.3 y 4 del documento general.
 
@@ -40,8 +40,15 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-02 (crear y consultar tickets): ver `specs/features/HU-02-tickets/spec.md` (plan y tareas aprobados; T1-T8 en verde).
 - HU-03 (prioridad y estado del ticket): ver `specs/features/HU-03-priority-status/` (implementada y validada en `develop`).
 - HU-04 (asignar tickets a técnicos): ver `specs/features/HU-04-assignment/` (implementada y validada en `develop`).
-- HU-11 (dashboard de tickets): ver `specs/features/HU-11-tickets-dashboard/` (spec, plan y tareas aprobadas; RF-81 a RF-92).
-- HU-12 (dashboard de cumplimiento de SLA): ver `specs/features/HU-12-sla-dashboard/` (spec, plan y tareas aprobadas; RF-93 a RF-104).
+- HU-05 (configurar y controlar SLA por prioridad): ver `specs/features/HU-05-sla/` (implementada y validada en `develop`).
+- HU-06 (gestionar información y detalle del ticket): ver `specs/features/HU-06-ticket-detail/` (implementada y validada en `develop`).
+- HU-07 (registrar seguimiento y comentarios del ticket): ver `specs/features/HU-07-ticket-comments/` (implementada y validada en `develop`).
+- HU-08 (gestionar ciclo de vida del ticket): ver `specs/features/HU-08-ticket-lifecycle/` (implementada y validada en `develop`).
+- HU-09 (registrar historial y trazabilidad del ticket): ver `specs/features/HU-09-ticket-history/` (implementada y validada en `develop`).
+- HU-10 (alertas SLA): ver `specs/features/HU-10-sla-alerts/` (implementada y validada en `develop`).
+- HU-14 (configuración de SLA): ver `specs/features/HU-14-sla-config/` (implementada y validada en `develop`).
+- HU-11 (dashboard de tickets): ver `specs/features/HU-11-tickets-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-81 a RF-92).
+- HU-12 (dashboard de cumplimiento de SLA): ver `specs/features/HU-12-sla-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-93 a RF-104).
 - HU-20 (frontend del MVP): ver `specs/features/HU-20-frontend/` (spec, plan y tareas aprobadas; sin código).
 - HU-21 (estructura visual y navegación): ver `specs/features/HU-21-frontend-shell/` (spec, plan y tareas aprobadas; RF-69 a RF-80).
-- HU-05 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
+- HU-13 y HU-15 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

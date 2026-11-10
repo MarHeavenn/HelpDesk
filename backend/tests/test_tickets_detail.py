@@ -1,19 +1,20 @@
-"""T5 — GET /api/tickets/{ticket_id} (detalle). (RF-16)
+"""T5 — GET /api/tickets/{ticket_id} (detalle). (RF-16 y HU-06)
 
 Verifica:
-- RF-16: el detalle de un ticket propio responde 200 con **exactamente**
-  `{id, title, description, priority, status, assignee, created_at,
-  requester_id}`, con los valores almacenados (titulo y descripcion ya
-  recortados al crear), `priority` sin fijar (`null`, contrato ampliado
-  por HU-03), `assignee` vacio (`null`, contrato ampliado por HU-04),
-  `status` igual al valor almacenado (`Abierto`) y `created_at` en ISO
-  8601 con offset UTC (`+00:00`, microsegundos).
-- RF-16: la respuesta no expone nombre, correo, rol, contrasena, hash ni
-  ningun otro dato personal del solicitante; solo su identificador opaco
-  (`requester_id`).
+- RF-16 y RF-54 (HU-06): el detalle de un ticket propio responde 200 con
+  **exactamente** `{id, title, description, priority, status, assignee,
+  requester, sla, created_at, resolved_at, requester_id}`, con los valores
+  almacenados (titulo y descripcion ya recortados al crear), `priority`
+  sin fijar (`null`, contrato ampliado por HU-03), `assignee` vacio
+  (`null`, contrato ampliado por HU-04), `sla` nulo sin prioridad (HU-05),
+  `status` igual al valor almacenado (`Abierto`), `resolved_at` nulo y
+  `created_at` en ISO 8601 con offset UTC (`+00:00`, microsegundos).
+- RF-53 y RF-59 (HU-06): `requester` expone `{id, name, email}` del
+  solicitante, pero nunca su rol, contrasena, hash, token ni sesion.
 
-El camino de error (404 unificado: inexistente, ajeno o formato invalido)
-y la precedencia 401>404 son de T6 y no se cubren aqui.
+El camino de error (404 unificado: inexistente, ajeno o formato invalido),
+la precedencia 401>404 y la visibilidad de tecnico/administrador son de
+HU-06 y se cubren en `test_ticket_detail_visibility.py`.
 """
 
 import os
@@ -96,7 +97,10 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
         "priority",
         "status",
         "assignee",
+        "requester",
+        "sla",
         "created_at",
+        "resolved_at",
         "requester_id",
     }
     assert body["id"] == created["id"]
@@ -106,7 +110,14 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
     assert body["priority"] is None
     assert body["status"] == "Abierto"
     assert body["assignee"] is None
+    assert body["sla"] is None
+    assert body["resolved_at"] is None
     assert body["requester_id"] == user["id"]
+    assert body["requester"] == {
+        "id": user["id"],
+        "name": "Ana Perez",
+        "email": "ana@ejemplo.com",
+    }
     assert '"assignee":null' in response.text
     # Misma representacion de created_at que la creacion: ISO 8601 + UTC.
     assert body["created_at"] == created["created_at"]
@@ -115,40 +126,39 @@ def test_detail_of_own_ticket_returns_200_with_full_ticket():
     assert body["created_at"].endswith("+00:00")
 
 
-# --- RF-16: sin datos personales ni hash ---
+# --- HU-06 RF-59: datos del solicitante sin credenciales ni rol ---
 
 
-def test_detail_does_not_expose_personal_data_or_hash():
-    _register_and_login()
+def test_detail_exposes_requester_but_never_credentials_or_role():
+    user = _register_and_login()
     created = _create("Titulo", "Descripcion")
 
     response = client.get(f"/api/tickets/{created['id']}")
 
     assert response.status_code == 200
     body = response.json()
-    # Ni las claves prohibidas...
+    # `requester` solo lleva identificador, nombre y correo.
+    assert set(body["requester"]) == {"id", "name", "email"}
+    assert body["requester"]["id"] == user["id"]
+    assert body["requester"]["email"] == user["email"]
+    # Ni claves prohibidas en el cuerpo...
     for forbidden in (
-        "name",
-        "email",
         "role",
         "password",
         "password_hash",
         "hash",
         "token",
         "session",
-        "requester",  # solo el identificador opaco, no un objeto anidado
     ):
         assert forbidden not in body
-    assert "requester_id" in body
-
-    # ...ni ningun valor con forma de dato personal o de hash en el cuerpo
-    # crudo: un dato colado por su valor tambien debe fallar.
+    # ...ni valores con forma de credencial en el cuerpo crudo.
     raw = response.text
-    assert "@" not in raw  # ningun valor con forma de correo
     assert "$argon2" not in raw  # ningun hash de contrasena
-    assert "Ana Perez" not in raw  # ningun nombre
-    assert "cliente" not in raw  # ningun rol
     assert "Secreta123" not in raw  # ningun valor de contrasena
+    assert '"role"' not in raw  # ningun rol
+    # El nombre y el correo solo aparecen dentro de `requester`.
+    assert raw.count('"email"') == 1
+    assert raw.count('"name"') == 1
 
 
 # --- RF-15 (regla de consulta): parametros desconocidos ignorados ---

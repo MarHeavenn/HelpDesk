@@ -63,9 +63,9 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 
 PASSWORD = "Secreta123"
 
-# Composiciones exactas de RF-35.1, RF-35.2 y RF-35.3 (D7). `assignee` es
-# el unico campo anadido a las composiciones de HU-02/HU-03.
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+# Composiciones exactas de RF-35.1, RF-35.2 y RF-35.3 (D7), ampliadas por
+# HU-05 (`sla`) y HU-06 (`requester` y `resolved_at` en el detalle).
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 DETAIL_FIELDS = {
     "id",
     "title",
@@ -73,7 +73,10 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
+    "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
 ASSIGNEE_FIELDS = {"id", "name"}
@@ -180,7 +183,14 @@ def _assert_no_sensitive_content(response, technician):
     raw = response.text
     assert technician.email not in raw
     assert PASSWORD not in raw
-    for forbidden in FORBIDDEN_ASSIGNMENT_FIELDS | {"email", "password"}:
+    for forbidden in FORBIDDEN_ASSIGNMENT_FIELDS | {
+        "password",
+        "password_hash",
+        "hash",
+        "token",
+        "session",
+        "role",
+    }:
         assert forbidden not in raw
 
 
@@ -355,10 +365,13 @@ def test_reassignment_updates_assignee_everywhere():
     priority = admin_api.put(
         f"/api/tickets/{ticket_id}/priority", json={"priority": "Media"}
     )
+    in_progress = admin_api.put(
+        f"/api/tickets/{ticket_id}/status", json={"status": "En progreso"}
+    )
     status = admin_api.put(
         f"/api/tickets/{ticket_id}/status", json={"status": "Resuelto"}
     )
-    for response in (priority, status):
+    for response in (priority, in_progress, status):
         assert response.status_code == 200
         _assert_technician_assignee(response.json(), second)
 
@@ -404,7 +417,7 @@ def test_raw_bodies_include_the_null_token_when_unassigned():
         assert '"assignee":null' in response.text
 
 
-def test_no_response_exposes_email_credentials_or_assignment_log():
+def test_no_response_exposes_credentials_role_or_assignment_log():
     technician = _provision("tecnico", "Ana Torres", "ana@ejemplo.com")
     client_api, _ = _client_session()
     created = _create_ticket(client_api)
@@ -418,6 +431,9 @@ def test_no_response_exposes_email_credentials_or_assignment_log():
         client_api.get(f"/api/tickets/{ticket_id}"),
         admin_api.put(
             f"/api/tickets/{ticket_id}/priority", json={"priority": "Alta"}
+        ),
+        admin_api.put(
+            f"/api/tickets/{ticket_id}/status", json={"status": "En progreso"}
         ),
         admin_api.put(
             f"/api/tickets/{ticket_id}/status", json={"status": "Resuelto"}

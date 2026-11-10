@@ -15,7 +15,7 @@ Mapa RF -> test (en este archivo):
 - RF-21 -> test_sweep_each_catalog_value_is_accepted
 - RF-22 -> test_sweep_modification_raw_composition
 - RF-23 -> test_sweep_modification_raw_composition,
-           test_sweep_free_transitions_accumulate
+           test_sweep_lifecycle_transitions_accumulate
 - RF-24 -> test_sweep_two_sessions_management_roles_modify_any_ticket,
            test_sweep_precedence_table_with_real_sessions
 - RF-25 -> test_sweep_precedence_table_with_real_sessions
@@ -23,7 +23,7 @@ Mapa RF -> test (en este archivo):
            test_sweep_log_ties_do_not_assert_order
 - RF-27 -> test_sweep_queries_show_current_values_raw,
            test_sweep_modification_raw_composition
-- RF-28 -> test_sweep_free_transitions_accumulate,
+- RF-28 -> test_sweep_lifecycle_transitions_accumulate,
            test_sweep_precedence_table_with_real_sessions
 - RF-29 -> test_sweep_invalid_requests_return_422
 - RF-30 -> test_sweep_precedence_table_with_real_sessions,
@@ -96,10 +96,13 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
+    "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 
 # Mapa RF -> test(s) que lo cubren (contrastado por
 # `test_sweep_rf_map_covers_all_requirements`).
@@ -108,7 +111,7 @@ RF_MAP = {
     "RF-22": "test_sweep_modification_raw_composition",
     "RF-23": (
         "test_sweep_modification_raw_composition"
-        " + test_sweep_free_transitions_accumulate"
+        " + test_sweep_lifecycle_transitions_accumulate"
     ),
     "RF-24": (
         "test_sweep_two_sessions_management_roles_modify_any_ticket"
@@ -124,7 +127,7 @@ RF_MAP = {
         " + test_sweep_modification_raw_composition"
     ),
     "RF-28": (
-        "test_sweep_free_transitions_accumulate"
+        "test_sweep_lifecycle_transitions_accumulate"
         " + test_sweep_precedence_table_with_real_sessions"
     ),
     "RF-29": "test_sweep_invalid_requests_return_422",
@@ -136,7 +139,7 @@ RF_MAP = {
 
 VALID_BODIES = {
     "priority": {"priority": "Alta"},
-    "status": {"status": "Resuelto"},
+    "status": {"status": "En progreso"},
 }
 OUT_OF_CATALOG = {
     "priority": {"priority": "Urgente"},
@@ -230,6 +233,21 @@ def _put(endpoint, ticket_id, body=NO_BODY, target=staff_client):
     return target.put(url, json=body)
 
 
+_PATH_TO = {
+    "Abierto": [],
+    "En progreso": ["En progreso"],
+    "Resuelto": ["En progreso", "Resuelto"],
+    "Cerrado": ["En progreso", "Resuelto", "Cerrado"],
+}
+
+
+def _advance(ticket_id, target, session=staff_client):
+    for status in _PATH_TO[target]:
+        response = _put("status", ticket_id, {"status": status}, target=session)
+        assert response.status_code == 200, response.text
+    assert get_ticket_repository().find_by_id(ticket_id).status == target
+
+
 def _ticket_state(ticket_id):
     stored = get_ticket_repository().find_by_id(ticket_id)
     assert stored is not None
@@ -280,12 +298,13 @@ def test_sweep_each_catalog_value_is_accepted():
 
     for status in STATUSES:
         created = _create_ticket(client)
-        if status == OPEN_STATUS:
-            # Para ejercitar el valor como cambio, se sale y se vuelve.
-            assert (
-                _put("status", created["id"], {"status": "En progreso"}).status_code
-                == 200
-            )
+        if status != OPEN_STATUS:
+            source = {
+                "En progreso": "Abierto",
+                "Resuelto": "En progreso",
+                "Cerrado": "Resuelto",
+            }[status]
+            _advance(created["id"], source)
         response = _put("status", created["id"], {"status": status})
         assert response.status_code == 200, status
         assert response.json()["status"] == status
@@ -320,7 +339,14 @@ def test_sweep_modification_raw_composition():
         "priority": None,
         "status": "En progreso",
         "assignee": None,
+        "requester": {
+            "id": requester["id"],
+            "name": "Ana Perez",
+            "email": "ana@ejemplo.com",
+        },
+        "sla": None,
         "created_at": created["created_at"],
+        "resolved_at": None,
         "requester_id": requester["id"],
     }
     assert '"priority":null' in status_change.text
@@ -331,16 +357,24 @@ def test_sweep_modification_raw_composition():
     priority_change = _put("priority", created["id"], {"priority": "Alta"})
     assert priority_change.status_code == 200
     raw_priority = json.loads(priority_change.text)
-    assert raw_priority == {
+    # El SLA tiene tiempos dependientes del reloj: se compara aparte.
+    assert {key: value for key, value in raw_priority.items() if key != "sla"} == {
         "id": created["id"],
         "title": "Titulo de barrido",
         "description": "Descripcion de barrido",
         "priority": "Alta",
         "status": "En progreso",
         "assignee": None,
+        "requester": {
+            "id": requester["id"],
+            "name": "Ana Perez",
+            "email": "ana@ejemplo.com",
+        },
         "created_at": created["created_at"],
+        "resolved_at": None,
         "requester_id": requester["id"],
     }
+    assert raw_priority["sla"]["target_minutes"] == 240
     assert '"priority":"Alta"' in priority_change.text
     assert '"status":"En progreso"' in priority_change.text
     assert '"assignee":null' in priority_change.text
@@ -358,27 +392,29 @@ def test_sweep_modification_raw_composition():
             assert forbidden not in response.text
 
 
-# --- RF-23 y RF-28: transiciones libres, acumulacion y cerrado inmutable ---
+# --- RF-23 y RF-28: flujo del ciclo de vida, acumulacion y cerrado inmutable ---
 
 
-def test_sweep_free_transitions_accumulate():
+def test_sweep_lifecycle_transitions_accumulate():
     _register_and_login(client)
     created = _create_ticket(client)
     actor = _provision_and_login()
 
-    # Saltos y retrocesos sin reglas de secuencia (RF-23).
-    transitions = ["Resuelto", "En progreso", "Cerrado"]
+    # Flujo permitido de HU-08 con el retroceso antes del cierre (RF-23).
+    transitions = ["En progreso", "Resuelto", "En progreso", "Resuelto", "Cerrado"]
     responses = [
         _put("status", created["id"], {"status": status})
         for status in transitions
     ]
-    assert [response.status_code for response in responses] == [200, 200, 200]
+    assert [response.status_code for response in responses] == [200] * 5
 
     records = get_ticket_modification_log().list_by_ticket(created["id"])
     assert [(record.previous_value, record.new_value) for record in records] == [
-        (OPEN_STATUS, "Resuelto"),
+        (OPEN_STATUS, "En progreso"),
+        ("En progreso", "Resuelto"),
         ("Resuelto", "En progreso"),
-        ("En progreso", "Cerrado"),
+        ("En progreso", "Resuelto"),
+        ("Resuelto", "Cerrado"),
     ]
     assert {record.actor_id for record in records} == {actor.id}
     assert get_ticket_repository().find_by_id(created["id"]).status == "Cerrado"
@@ -475,7 +511,7 @@ def test_sweep_log_records_each_change_without_exposing_it():
 
     before = datetime.now(timezone.utc)
     priority_response = _put("priority", created["id"], {"priority": "Baja"})
-    status_response = _put("status", created["id"], {"status": "Resuelto"})
+    status_response = _put("status", created["id"], {"status": "En progreso"})
     after = datetime.now(timezone.utc)
 
     assert priority_response.status_code == status_response.status_code == 200
@@ -495,7 +531,7 @@ def test_sweep_log_records_each_change_without_exposing_it():
 
     assert status_record.ticket_id == created["id"]
     assert status_record.previous_value == OPEN_STATUS
-    assert status_record.new_value == "Resuelto"
+    assert status_record.new_value == "En progreso"
     assert status_record.actor_id == actor.id
     assert before <= status_record.changed_at <= after
 
@@ -576,6 +612,7 @@ def test_sweep_queries_show_current_values_raw():
     assert (
         _put("priority", created["id"], {"priority": "Media"}).status_code == 200
     )
+    _advance(created["id"], "En progreso")
     assert (
         _put("status", created["id"], {"status": "Resuelto"}).status_code == 200
     )
@@ -685,6 +722,7 @@ def test_sweep_precedence_table_with_real_sessions():
         _put("priority", closed_ticket["id"], {"priority": "Media"}).status_code
         == 200
     )
+    _advance(closed_ticket["id"], "Resuelto")
     assert (
         _put("status", closed_ticket["id"], {"status": "Cerrado"}).status_code
         == 200
@@ -799,9 +837,8 @@ def test_sweep_no_rejection_uses_400_or_403():
     open_ticket = _create_ticket(client)
     to_close = _create_ticket(client)
     _provision_and_login()
-    assert (
-        _put("status", to_close["id"], {"status": "Cerrado"}).status_code == 200
-    )
+    _advance(to_close["id"], "Cerrado")
+    assert get_ticket_repository().find_by_id(to_close["id"]).status == "Cerrado"
 
     before = _snapshot(open_ticket["id"], to_close["id"])
     responses = []

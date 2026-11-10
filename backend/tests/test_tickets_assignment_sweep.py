@@ -92,10 +92,13 @@ DETAIL_FIELDS = {
     "priority",
     "status",
     "assignee",
+    "requester",
+    "sla",
     "created_at",
+    "resolved_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
 ASSIGNEE_FIELDS = {"id", "name"}
 
 # Claves internas del registro que no deben aparecer en ningun cuerpo.
@@ -242,6 +245,20 @@ def _put_priority(ticket_id, priority, target=admin_api):
     return target.put(
         f"/api/tickets/{ticket_id}/priority", json={"priority": priority}
     )
+
+
+_PATH_TO = {
+    "Abierto": [],
+    "En progreso": ["En progreso"],
+    "Resuelto": ["En progreso", "Resuelto"],
+    "Cerrado": ["En progreso", "Resuelto", "Cerrado"],
+}
+
+
+def _advance(ticket_id, target, session=admin_api):
+    for status in _PATH_TO[target]:
+        response = _put_status(ticket_id, status, target=session)
+        assert response.status_code == 200, response.text
 
 
 def _ticket_state(ticket_id):
@@ -472,8 +489,9 @@ def test_sweep_assignment_log_records_changes_without_exposing_them():
     assert get_assignment_log().count() == 2
 
     # Ticket cerrado: 409 incluso repitiendo el vigente, sin registro.
+    _advance(created["id"], "Cerrado")
     closed = _put_status(created["id"], "Cerrado")
-    assert closed.status_code == 200
+    assert closed.status_code == 409
     before_rejection = _snapshot(created["id"])
     rejected = _put_assignee(created["id"], {"assignee_id": tech_two.id})
     assert rejected.status_code == 409
@@ -497,13 +515,17 @@ def test_sweep_assignment_log_records_changes_without_exposing_them():
             response, extra_forbidden=(tech_one.email, tech_two.email)
         )
 
-    # Tampoco existe una ruta publica de historial: solo la consulta a cargo.
+    # La unica ruta publica de historial es la de HU-09; el registro de
+    # asignaciones no se expone como log ni como record.
     paths = app.openapi()["paths"]
     assignment_paths = [path for path in paths if "assignment" in path.lower()]
     assert assignment_paths == ["/api/assignments/mine"]
     assert set(paths["/api/tickets/{ticket_id}/assignee"]) == {"put"}
+    assert set(paths["/api/tickets/{ticket_id}/history"]) == {"get"}
     for path in paths:
         if "ticket" not in path.lower() and "assignment" not in path.lower():
+            continue
+        if path == "/api/tickets/{ticket_id}/history":
             continue
         assert not any(
             token in path.lower() for token in ("history", "log", "record")
@@ -637,7 +659,7 @@ def test_sweep_tickets_assigned_to_me():
     assert _put_assignee(first["id"], {"assignee_id": tech_one.id}).status_code == 200
     assert _put_assignee(second["id"], {"assignee_id": tech_one.id}).status_code == 200
     # Cualquier estado, incluido `Cerrado`, sigue en la lista (RF-36).
-    assert _put_status(second["id"], "Cerrado").status_code == 200
+    _advance(second["id"], "Cerrado")
 
     mine = tech_api.get("/api/assignments/mine")
     assert mine.status_code == 200
@@ -742,7 +764,7 @@ def test_sweep_precedence_table_with_real_sessions():
         _put_assignee(closed_ticket["id"], {"assignee_id": tech.id}).status_code
         == 200
     )
-    assert _put_status(closed_ticket["id"], "Cerrado").status_code == 200
+    _advance(closed_ticket["id"], "Cerrado")
 
     # Cuerpo 404 uniforme de HU-02, identico en todos los intentos.
     unified = client_api.get(f"/api/tickets/{uuid.uuid4()}")
@@ -925,7 +947,7 @@ def test_sweep_no_rejection_uses_400_or_403():
     )
     open_ticket = _create_ticket()
     closed_ticket = _create_ticket()
-    assert _put_status(closed_ticket["id"], "Cerrado").status_code == 200
+    _advance(closed_ticket["id"], "Cerrado")
 
     before = _snapshot(open_ticket["id"], closed_ticket["id"])
     ticket_count = get_ticket_repository().count()

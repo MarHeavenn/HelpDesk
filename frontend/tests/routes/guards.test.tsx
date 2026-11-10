@@ -13,7 +13,10 @@ import {
   TECNICO,
   createAuthApi,
 } from '../helpers/renderApp'
-import { buildTicketDashboard } from '../helpers/dashboardFixtures'
+import {
+  buildSlaDashboard,
+  buildTicketDashboard,
+} from '../helpers/dashboardFixtures'
 import type { AuthUser } from '@/types/domain'
 
 function jsonResponse(body: unknown): Response {
@@ -26,7 +29,13 @@ function jsonResponse(body: unknown): Response {
 function stubDashboardFetch(): void {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => jsonResponse(buildTicketDashboard())),
+    vi.fn(async (input: unknown) => {
+      const url = String(input)
+      if (url.includes('/api/dashboard/sla')) {
+        return jsonResponse(buildSlaDashboard())
+      }
+      return jsonResponse(buildTicketDashboard())
+    }),
   )
 }
 

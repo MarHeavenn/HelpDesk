@@ -4,8 +4,9 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '@/api/httpClient'
-import { useTicketsDashboard } from '@/hooks/useDashboard'
+import { useSlaDashboard, useTicketsDashboard } from '@/hooks/useDashboard'
 import {
+  buildSlaDashboard,
   buildTicketDashboard,
   createDashboardApi,
 } from '../helpers/dashboardFixtures'
@@ -81,5 +82,19 @@ describe('useDashboard', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(getTickets).toHaveBeenCalledTimes(1)
+  })
+
+  it('consulta el SLA con el periodo recibido', async () => {
+    const payload = buildSlaDashboard({ period_days: 7 })
+    const getSla = vi.fn(async () => payload)
+    const api = createDashboardApi({ getSla })
+
+    const { result } = renderHook(() => useSlaDashboard(7, api), {
+      wrapper: wrapper(createClient()),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(getSla).toHaveBeenCalledWith(7)
+    expect(result.current.data?.period_days).toBe(7)
   })
 })

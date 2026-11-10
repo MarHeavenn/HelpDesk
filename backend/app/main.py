@@ -16,6 +16,9 @@ from app.modules.tickets.interface.assignments_router import (
 from app.modules.tickets.interface.comments_router import (
     router as comments_router,
 )
+from app.modules.tickets.interface.dashboard_router import (
+    router as tickets_dashboard_router,
+)
 from app.modules.tickets.interface.history_router import (
     router as history_router,
 )
@@ -51,6 +54,7 @@ app.include_router(assignments_router)
 app.include_router(comments_router)
 app.include_router(history_router)
 app.include_router(sla_router)
+app.include_router(tickets_dashboard_router)
 
 
 @app.get("/health")

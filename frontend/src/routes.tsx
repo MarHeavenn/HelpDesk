@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import AppShell from '@/layout/AppShell'
 import { firstAllowedRoute } from '@/lib/permissions'
 import { strings } from '@/lib/strings'
+import DashboardPage from '@/pages/DashboardPage'
 import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import PlaceholderPage from '@/pages/PlaceholderPage'
@@ -87,10 +88,7 @@ export default function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route element={<RequireRole allow={STAFF_ROLES} />}>
-            <Route
-              path="/"
-              element={<PlaceholderPage title={strings.routes.titles['/']} />}
-            />
+            <Route path="/" element={<DashboardPage />} />
             <Route
               path="/tickets"
               element={

@@ -1,10 +1,19 @@
 import type { ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 
 import { AuthProvider, type AuthApi } from '@/context/AuthContext'
 import type { AuthUser } from '@/types/domain'
+
+export function createQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  })
+}
 
 export const ADMIN: AuthUser = {
   id: 'u-admin',
@@ -41,19 +50,27 @@ export function createAuthApi(
 
 export function renderApp(
   ui: ReactNode,
-  options: { user?: AuthUser; route?: string; api?: AuthApi } = {},
+  options: {
+    user?: AuthUser
+    route?: string
+    api?: AuthApi
+    queryClient?: QueryClient
+  } = {},
 ) {
   const user = options.user ?? ADMIN
   const api = options.api ?? createAuthApi(user)
+  const queryClient = options.queryClient ?? createQueryClient()
 
   return render(
-    <AuthProvider api={api}>
-      <MemoryRouter initialEntries={[options.route ?? '/']}>
-        <Routes>
-          <Route path="/login" element={<p>pantalla de login</p>} />
-          <Route path="*" element={ui} />
-        </Routes>
-      </MemoryRouter>
-    </AuthProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider api={api}>
+        <MemoryRouter initialEntries={[options.route ?? '/']}>
+          <Routes>
+            <Route path="/login" element={<p>pantalla de login</p>} />
+            <Route path="*" element={ui} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    </QueryClientProvider>,
   )
 }

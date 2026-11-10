@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -12,7 +13,22 @@ import {
   TECNICO,
   createAuthApi,
 } from '../helpers/renderApp'
+import { buildTicketDashboard } from '../helpers/dashboardFixtures'
 import type { AuthUser } from '@/types/domain'
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function stubDashboardFetch(): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => jsonResponse(buildTicketDashboard())),
+  )
+}
 
 function renderRoute(route: string, user?: AuthUser) {
   const api = user
@@ -22,17 +38,24 @@ function renderRoute(route: string, user?: AuthUser) {
           throw new ApiError(401, 'sin sesión')
         }),
       })
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  })
+  stubDashboardFetch()
 
   return render(
-    <AuthProvider api={api}>
-      <MemoryRouter initialEntries={[route]}>
-        <AppRoutes />
-      </MemoryRouter>
-    </AuthProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider api={api}>
+        <MemoryRouter initialEntries={[route]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </AuthProvider>
+    </QueryClientProvider>,
   )
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   localStorage.clear()
 })
 

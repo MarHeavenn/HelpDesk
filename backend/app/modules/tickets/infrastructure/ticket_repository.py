@@ -53,7 +53,12 @@ class InMemoryTicketRepository:
         return tickets
 
     def list_all(self) -> list[Ticket]:
-        """Todos los tickets del sistema, ordenados por created_at descendente."""
+        """Todos los tickets del sistema, ordenados por created_at descendente.
+
+        El agregado del dashboard recorre una sola vez esta lista para que
+        las invariantes de estado, prioridad y tecnico se calculen sobre el
+        mismo conjunto (RF-89).
+        """
         tickets = list(self._by_id.values())
         tickets.sort(key=lambda ticket: ticket.created_at, reverse=True)
         return tickets

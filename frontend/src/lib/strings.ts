@@ -85,6 +85,42 @@ export const strings = {
     loading: 'Cargando dashboard',
     ticketsCount: (count: number) =>
       `${count} ${count === 1 ? 'ticket' : 'tickets'}`,
+    sla: {
+      title: 'Cumplimiento de SLA',
+      subtitle: (days: number) => `Últimos ${days} días`,
+      threshold: (threshold: number) =>
+        `Riesgo desde el ${threshold} % del tiempo restante`,
+      periodLabel: 'Periodo del cumplimiento de SLA',
+      period: (days: number) => `${days} días`,
+      compliance: 'Cumplimiento',
+      donutLabel: (value: string) => `Cumplimiento de SLA: ${value}`,
+      legendLabel: 'Leyenda de estados de SLA',
+      states: {
+        en_tiempo: 'En tiempo',
+        en_riesgo: 'En riesgo',
+        cumplido: 'Cumplidos',
+        incumplido: 'Incumplidos',
+      },
+      byPriority: 'Cumplimiento por prioridad',
+      priorityEvaluated: (count: number) =>
+        `${count} ${count === 1 ? 'evaluado' : 'evaluados'}`,
+      withoutSla: (count: number) =>
+        `${count} ${count === 1 ? 'ticket' : 'tickets'} sin SLA (sin prioridad) ${
+          count === 1 ? 'excluido' : 'excluidos'
+        } del cálculo`,
+      closedWithoutResolvedAt: (count: number) =>
+        `${count} ${
+          count === 1 ? 'ticket cerrado' : 'tickets cerrados'
+        } sin fecha de resolución se ${
+          count === 1 ? 'cuenta' : 'cuentan'
+        } como cumplido${count === 1 ? '' : 's'}`,
+      emptyTitle: 'No hay tickets evaluables en este periodo',
+      emptyBody:
+        'Cambia el periodo o revisa que los tickets tengan prioridad asignada.',
+      errorTitle: 'No se pudo cargar el cumplimiento de SLA',
+      errorBody: 'Revisa tu conexión e inténtalo de nuevo.',
+      loading: 'Cargando cumplimiento de SLA',
+    },
   },
   auth: {
     title: 'Iniciar sesión',

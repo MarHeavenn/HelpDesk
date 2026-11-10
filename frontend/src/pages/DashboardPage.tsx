@@ -6,6 +6,7 @@ import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton'
 import DistributionCard from '@/components/dashboard/DistributionCard'
 import KpiCard from '@/components/dashboard/KpiCard'
 import RecentTicketsTable from '@/components/dashboard/RecentTicketsTable'
+import SlaCompliancePanel from '@/components/dashboard/SlaCompliancePanel'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import PageHeader from '@/components/ui/PageHeader'
@@ -137,7 +138,10 @@ export default function DashboardPage({ api }: { api?: DashboardApi }) {
           )}
 
           {dashboard.total_tickets > 0 ? (
-            <RecentTicketsTable tickets={dashboard.recent_tickets} />
+            <>
+              <SlaCompliancePanel api={api} />
+              <RecentTicketsTable tickets={dashboard.recent_tickets} />
+            </>
           ) : null}
         </div>
       ) : null}

@@ -8,6 +8,10 @@ import DashboardPage from '@/pages/DashboardPage'
 import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import PlaceholderPage from '@/pages/PlaceholderPage'
+import MyTicketsPage from '@/pages/MyTicketsPage'
+import CreateTicketPage from '@/pages/CreateTicketPage'
+import TechniciansPage from '@/pages/TechniciansPage'
+import SlaPage from '@/pages/SlaPage'
 import type { Rol } from '@/types/domain'
 
 const ADMIN_ROLES: readonly Rol[] = ['administrador']
@@ -99,27 +103,21 @@ export default function AppRoutes() {
 
           <Route
             path="/mis-tickets"
-            element={
-              <PlaceholderPage title={strings.routes.titles['/mis-tickets']} />
-            }
+            element={<MyTicketsPage />}
           />
           <Route
             path="/tickets/nuevo"
-            element={
-              <PlaceholderPage title={strings.routes.titles['/tickets/nuevo']} />
-            }
+            element={<CreateTicketPage />}
           />
 
           <Route element={<RequireRole allow={ADMIN_ROLES} />}>
             <Route
               path="/tecnicos"
-              element={
-                <PlaceholderPage title={strings.routes.titles['/tecnicos']} />
-              }
+              element={<TechniciansPage />}
             />
             <Route
               path="/sla"
-              element={<PlaceholderPage title={strings.routes.titles['/sla']} />}
+              element={<SlaPage />}
             />
             <Route
               path="/usuarios"

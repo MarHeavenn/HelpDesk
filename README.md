@@ -66,6 +66,21 @@ El frontend queda en <http://localhost:5173>. `npm` debe ejecutarse dentro de `f
 
 Abre `http://localhost:5173/login` e inicia sesión con una de las cuentas demo. El frontend consume la API en `http://localhost:8000` (configurable con `VITE_API_URL`). Usa `localhost`, no `127.0.0.1`, para que la cookie de sesión `SameSite=Lax` viaje a la API.
 
+### Flujo disponible en el MVP
+
+Con la cuenta de administrador se pueden demostrar las funciones reales del backend desde el frontend:
+
+1. Iniciar sesión en `/login`.
+2. Consultar el dashboard en `/`.
+3. Crear tickets en `/tickets/nuevo`.
+4. Consultar tickets propios en `/mis-tickets`.
+5. Abrir el detalle para cambiar prioridad/estado, asignar técnicos,
+   comentar, consultar historial y reabrir tickets cerrados.
+6. Consultar técnicos en `/tecnicos`.
+7. Consultar y modificar políticas SLA en `/sla`.
+
+Los tickets, usuarios y políticas del servidor de desarrollo se almacenan en memoria y se reinician al detener el backend.
+
 ### Usuarios de desarrollo
 
 `dev_server.py` crea automáticamente un administrador y un técnico, porque no existe un endpoint público para esos roles:

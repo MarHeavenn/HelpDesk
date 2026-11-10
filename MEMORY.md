@@ -60,3 +60,31 @@
 - HU-21 T7..T10: drawer, marcadores, logout y cierre.
 - Integrar los módulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos preexistentes de precedencia 401/404.
+
+## Prototipo v1
+
+- En `prototipo-v1`, HU-20 T5 completada: servicios tipados para tickets,
+  comentarios, historial, asignaciones y técnicos, más mapper de tickets.
+- Frontend validado: 92 tests pasan y `npm run build` compila.
+- HU-20 T13 completada: `/mis-tickets` consume tickets reales; administra
+  consulta propia y técnico consulta asignados, con carga, vacío, error y
+  redirección por sesión inválida. La suite frontend queda en 95 tests.
+- HU-20 T14 completada: `/tickets/nuevo` valida y crea tickets reales, fija
+  prioridad para administrador/técnico y conserva la prioridad elegida por un
+  cliente como metadato local. La suite frontend queda en 97 tests.
+- HU-20 T15 completada para el MVP reducido: `/mis-tickets` abre el detalle
+  real con descripción, SLA, comentarios e historial; permite acciones de
+  prioridad/estado, asignación y reapertura según rol. La suite queda en 98
+  tests. Las vistas demo quedan fuera del MVP reducido.
+- HU-20 T17 completada para el MVP reducido: `/tecnicos` consume el directorio
+  real y la asignación se ejecuta desde el detalle del ticket. La suite queda
+  en 100 tests.
+- HU-20 T18 completada para el MVP reducido: `/sla` consulta y actualiza las
+  políticas reales mediante `GET/PUT /api/sla/policies`, con validación y
+  estados de carga/error. La suite queda en 103 tests.
+- MVP reducido cerrado: frontend con 103 tests, build y lint en verde. Backend
+  verificado con Python del sistema: 1180 passed, 14 skipped y 3 fallos
+  conocidos de precedencia 401/404 en sesiones inválidas; no se modificaron
+  esos casos porque son ajenos al prototipo frontend.
+- `frontend/node_modules` se instaló localmente; `npm install` reportó 15
+  vulnerabilidades del árbol existente (12 moderadas, 1 alta, 2 críticas).

@@ -5,7 +5,8 @@ Mapa RF -> test:
   `test_dashboard_without_session_and_invalid_days_returns_401`,
   `test_dashboard_as_client_returns_unified_404`.
 - RF-94: `test_period_filters_old_and_future_tickets`,
-  `test_dashboard_invalid_days_returns_422`.
+  `test_dashboard_invalid_days_returns_422`,
+  `test_dashboard_accepts_each_supported_period`.
 - RF-95: `test_sin_sla_counts_tickets_without_priority`,
   `test_live_policy_change_affects_active_ticket`.
 - RF-96: `test_admin_aggregates_all_tickets_and_states`.
@@ -587,6 +588,17 @@ def test_dashboard_invalid_days_returns_422():
     response = client.get("/api/dashboard/sla?days=5")
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("days", [7, 30, 90])
+def test_dashboard_accepts_each_supported_period(days):
+    admin = _provision("administrador", "admin@ejemplo.com", "Admin Uno")
+    _login(admin.email)
+
+    response = client.get(f"/api/dashboard/sla?days={days}")
+
+    assert response.status_code == 200
+    assert response.json()["period_days"] == days
 
 
 def test_dashboard_empty_scope_returns_zero_contract():

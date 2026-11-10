@@ -56,7 +56,7 @@ def list_sla_tickets() -> list[SlaTicketView]: ...
 
 `GET /api/dashboard/sla?days=7|30|90`
 
-- `days` opcional, por defecto 30; `Literal[7, 30, 90]` produce 422 para otros valores.
+- `days` opcional, por defecto 30; se valida como entero con `Annotated[int, AfterValidator]` y produce 422 para valores fuera de 7/30/90.
 - Sesión válida obligatoria (401).
 - Rol `administrador`: todos los tickets del periodo.
 - Rol `tecnico`: solo los asignados a él.

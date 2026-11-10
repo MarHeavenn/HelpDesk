@@ -9,6 +9,9 @@ from app.modules.identity.interface.router import router as auth_router
 from app.modules.identity.interface.technicians_router import (
     router as technicians_router,
 )
+from app.modules.sla.interface.dashboard_router import (
+    router as sla_dashboard_router,
+)
 from app.modules.sla.interface.router import router as sla_router
 from app.modules.tickets.interface.assignments_router import (
     router as assignments_router,
@@ -54,6 +57,7 @@ app.include_router(assignments_router)
 app.include_router(comments_router)
 app.include_router(history_router)
 app.include_router(sla_router)
+app.include_router(sla_dashboard_router)
 app.include_router(tickets_dashboard_router)
 
 

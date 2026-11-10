@@ -1,7 +1,46 @@
 import { vi } from 'vitest'
 
 import type { DashboardApi } from '@/api/dashboard.api'
-import type { TicketDashboard } from '@/types/dashboard'
+import type {
+  SlaDashboard,
+  SlaPriorityBreakdown,
+  TicketDashboard,
+} from '@/types/dashboard'
+
+const PRIORITY_BREAKDOWN: SlaPriorityBreakdown[] = [
+  {
+    priority: 'Crítica',
+    en_tiempo: 1,
+    en_riesgo: 0,
+    cumplido: 1,
+    incumplido: 0,
+    compliance_percentage: 100,
+  },
+  {
+    priority: 'Alta',
+    en_tiempo: 0,
+    en_riesgo: 1,
+    cumplido: 0,
+    incumplido: 1,
+    compliance_percentage: 0,
+  },
+  {
+    priority: 'Media',
+    en_tiempo: 0,
+    en_riesgo: 0,
+    cumplido: 1,
+    incumplido: 0,
+    compliance_percentage: 100,
+  },
+  {
+    priority: 'Baja',
+    en_tiempo: 0,
+    en_riesgo: 0,
+    cumplido: 1,
+    incumplido: 0,
+    compliance_percentage: 100,
+  },
+]
 
 export function buildTicketDashboard(
   overrides: Partial<TicketDashboard> = {},
@@ -81,11 +120,55 @@ export function buildTicketDashboard(
   }
 }
 
+export function buildSlaDashboard(
+  overrides: Partial<SlaDashboard> = {},
+): SlaDashboard {
+  return {
+    total_evaluated: 6,
+    en_tiempo: 1,
+    en_riesgo: 1,
+    cumplido: 3,
+    incumplido: 1,
+    sin_sla: 1,
+    compliance_percentage: 66.67,
+    closed_without_resolved_at: 1,
+    threshold_percent: 20,
+    period_days: 30,
+    by_priority: PRIORITY_BREAKDOWN,
+    generated_at: '2026-11-02T12:00:00+00:00',
+    ...overrides,
+  }
+}
+
+export function buildEmptySlaDashboard(): SlaDashboard {
+  return buildSlaDashboard({
+    total_evaluated: 0,
+    en_tiempo: 0,
+    en_riesgo: 0,
+    cumplido: 0,
+    incumplido: 0,
+    sin_sla: 2,
+    compliance_percentage: 0,
+    closed_without_resolved_at: 0,
+    by_priority: PRIORITY_BREAKDOWN.map((item) => ({
+      ...item,
+      en_tiempo: 0,
+      en_riesgo: 0,
+      cumplido: 0,
+      incumplido: 0,
+      compliance_percentage: 0,
+    })),
+  })
+}
+
 export function createDashboardApi(
   overrides: Partial<DashboardApi> = {},
 ): DashboardApi {
   return {
     getTickets: vi.fn(async () => buildTicketDashboard()),
+    getSla: vi.fn(async (days) =>
+      buildSlaDashboard({ period_days: days }),
+    ),
     ...overrides,
   }
 }

@@ -14,7 +14,7 @@ Prerrequisitos: HU-21 (scaffold, cliente HTTP, AppShell y `/`) y HU-11 (dashboar
   - Hecho cuando: `sla/application/dashboard.py` filtra por rol y periodo, evalúa cada ticket, calcula totales, `sin_sla`, `closed_without_resolved_at`, porcentajes y `by_priority` con ceros; una sola pasada; tests de fórmulas, ceros, periodos 7/30/90 y dataset vacío en verde.
 - [ ] **T5. Router y validación.** RF-93, RF-94
   - Hecho cuando: `GET /api/dashboard/sla` responde 401 sin sesión, 404 para cliente, 200 para administrador/técnico y 422 para `days` fuera de 7/30/90; esquemas Pydantic con la composición del plan; tests de API en verde.
-- [ ] **T6. Tipos, servicio y hook del frontend.** RF-98 a RF-101
+- [x] **T6. Tipos, servicio y hook del frontend.** RF-98 a RF-101
   - Hecho cuando: `types/dashboard.ts` incluye el contrato de SLA; `dashboard.api.ts` consume el endpoint con `days`; `useSlaDashboard(days)` usa TanStack Query; tests con `FakeApiClient` de éxito, cambio de periodo, 401, 404 y error de red en verde.
 - [ ] **T7. Panel de cumplimiento.** RF-102
   - Hecho cuando: `/` muestra el panel con donut SVG, porcentaje al centro, leyenda de en tiempo/en riesgo/cumplido/incumplido, selector 7/30/90 con 30 por defecto y nota de `sin_sla`/`closed_without_resolved_at`; al cambiar el periodo se recarga con esqueleto; tests de valores, leyenda y selector en verde.

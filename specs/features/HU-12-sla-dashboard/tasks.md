@@ -13,9 +13,16 @@ No se repiten las tareas antiguas de `resolved_at` ni del dominio de SLA: ya exi
   - Hecho cuando: `GET /api/dashboard/sla` responde 401 sin sesión, 404 para cliente, 200 para administrador/técnico y 422 para `days` fuera de 7/30/90; esquemas Pydantic con la composición del plan; tests de API en verde.
 - [x] **T4. Tipos, servicio y hook del frontend.** RF-98 a RF-101
   - Hecho cuando: `types/dashboard.ts` incluye el contrato de SLA; `dashboard.api.ts` consume el endpoint con `days`; `useSlaDashboard(days)` usa TanStack Query; tests con `FakeApiClient` de éxito, cambio de periodo, 401, 404 y error de red en verde.
-- [ ] **T5. Panel de cumplimiento.** RF-102
+- [x] **T5. Panel de cumplimiento.** RF-102
   - Hecho cuando: `/` muestra el panel con donut SVG, porcentaje al centro, leyenda de en tiempo/en riesgo/cumplido/incumplido, selector 7/30/90 con 30 por defecto y nota de `sin_sla`/`closed_without_resolved_at`; al cambiar el periodo se recarga con esqueleto; tests de valores, leyenda y selector en verde.
-- [ ] **T6. Estados, accesibilidad e integración.** RF-100, RF-103, RF-104
+- [x] **T6. Estados, accesibilidad e integración.** RF-100, RF-103, RF-104
   - Hecho cuando: el panel cubre carga, vacío y error con «Reintentar»; un 401 cierra sesión; la leyenda no depende solo del color; es responsive; convive con el dashboard de HU-11 sin romper sus pruebas; no usa `DemoBadge`; tests de estados, accesibilidad y consistencia `total_evaluated + sin_sla` en verde.
-- [ ] **T7. Cierre, build y smoke.** RF-93 a RF-104
-  - Hecho cuando: `pytest` del backend y `npm run test`/`npm run build` pasan; smoke manual con administrador y técnico en 7/30/90 días; `MEMORY.md` actualizado; no hay RF sin cubrir o se documenta la brecha.
+- [x] **T7. Cierre, build y smoke.** RF-93 a RF-104
+  - Hecho cuando: `pytest` del backend y `npm run test`/`npm run build` pasan; smoke de API con administrador y técnico en 7/30/90 días; `MEMORY.md` actualizado; no hay RF sin cubrir o se documenta la brecha.
+
+## Verificación ejecutada
+
+- Backend: **1183 passed, 14 skipped** (`& ".venv\Scripts\python.exe" -m pytest backend -q`).
+- Frontend: **88 passed** (`npm run test`) y build de producción correcto (`npm run build`).
+- Smoke de API: administrador y técnico en 7/30/90 días; conteos esperados y `total_evaluated + sin_sla` consistentes.
+- Incidencia corregida: `?days=7` llegaba como cadena y `Literal[7, 30, 90]` lo rechazaba con 422; ahora se valida con `Annotated[int, AfterValidator]` y hay pruebas para los tres periodos.

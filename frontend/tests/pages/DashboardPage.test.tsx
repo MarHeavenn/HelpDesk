@@ -7,6 +7,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import { ApiError } from '@/api/httpClient'
 import { ADMIN, renderApp } from '../helpers/renderApp'
 import {
+  buildSlaDashboard,
   buildTicketDashboard,
   createDashboardApi,
 } from '../helpers/dashboardFixtures'
@@ -65,6 +66,11 @@ describe('DashboardPage', () => {
       'href',
       '/tickets',
     )
+
+    const sla = await screen.findByRole('region', {
+      name: 'Cumplimiento de SLA',
+    })
+    expect(await within(sla).findByText('66.67%')).toBeInTheDocument()
   })
 
   it('muestra esqueletos mientras carga el resumen', async () => {
@@ -197,5 +203,44 @@ describe('DashboardPage', () => {
     })
     expect(within(assignees).getByText('Tomás Técnico')).toBeInTheDocument()
     expect(within(assignees).queryByText('Luis')).not.toBeInTheDocument()
+  })
+
+  it('integra el panel de SLA y consulta el periodo elegido', async () => {
+    const getSla = vi.fn(async (days: number) =>
+      buildSlaDashboard({
+        period_days: days,
+        compliance_percentage: days === 7 ? 80 : 66.67,
+      }),
+    )
+    const api = createDashboardApi({ getSla })
+    const user = userEvent.setup()
+
+    renderPage(api)
+
+    const panel = await screen.findByRole('region', {
+      name: 'Cumplimiento de SLA',
+    })
+    expect(await within(panel).findByText('66.67%')).toBeInTheDocument()
+
+    await user.click(within(panel).getByRole('button', { name: '7 días' }))
+
+    expect(await within(panel).findByText('80%')).toBeInTheDocument()
+    expect(getSla).toHaveBeenLastCalledWith(7)
+  })
+
+  it('cierra la sesión cuando el panel de SLA responde 401', async () => {
+    const api = createDashboardApi({
+      getSla: vi.fn(async () => {
+        throw new ApiError(401, 'not authenticated')
+      }),
+    })
+    const logout = vi.fn(async () => undefined)
+
+    renderApp(<DashboardPage api={api} />, {
+      user: ADMIN,
+      api: createAuthApi(ADMIN, { logout }),
+    })
+
+    await waitFor(() => expect(logout).toHaveBeenCalledTimes(1))
   })
 })

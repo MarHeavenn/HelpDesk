@@ -3,14 +3,14 @@
 ## Estado actual
 
 - HU-01..HU-10 y HU-14 **mergeadas en `develop`** (backend en memoria).
-- Suite backend sin Docker: **760 passed, 14 skipped**; con Docker: 1154 passed,
-  3 fallos preexistentes de precedencia 401/404 con cookie inválida.
+- Suite backend sin Docker: **1183 passed, 14 skipped**; frontend: **88 passed**.
 - `HU-20` con ADR/spec/plan/tareas y sin código. `HU-21` (frontend shell)
-  T1..T6 completas; `HU-11` T1..T8 y `HU-12` T6 completas en sus ramas.
+  T1..T6 completas; `HU-11` T1..T8 y `HU-12` T1..T7 completas en sus ramas.
 - HU-11: dashboard real de tickets en `/` (`GET /api/dashboard/tickets`);
   administrador global, técnico asignados, cliente 404.
-- HU-12: reutilizará el módulo `sla` de HU-05/HU-14 (estados, umbral 20 %,
-  configuración vigente) y añadirá `GET /api/dashboard/sla` + panel en `/`.
+- HU-12: `GET /api/dashboard/sla` + panel «Cumplimiento de SLA» en `/`;
+  reutiliza el módulo `sla` de HU-05/HU-14 (estados, umbral 20 %, política
+  vigente) con contrato de lectura de `tickets`; periodos 7/30/90.
 - TSK-025 (PostgreSQL multitenant) mergeada (PR #9); la persistencia de los
   módulos sigue en memoria.
 
@@ -26,6 +26,9 @@
 - HU-05/HU-14: SLA 120/240/720/1440 min; `Resuelto`/`Cerrado` congelan
   `resolved_at`; reabrir reanuda; `GET/PUT /api/sla/policies` solo admin.
 - `sla` no importa `tickets`; `tickets` compone el SLA con `get_ticket_sla`.
+- HU-12: el agregado vive en `sla/application/dashboard.py`; `tickets/interface/
+  sla_contract.py` expone la vista mínima; el panel consume datos reales y no
+  duplica la política ni el umbral.
 
 ## Entorno local
 
@@ -48,11 +51,12 @@
 - Al añadir una ruta, revisar los barridos que afirman su ausencia.
 - Vitest sin `globals`: registrar `cleanup()` de RTL en `tests/setup.ts`.
 - Abrir el frontend en `localhost:5173`, no `127.0.0.1`, por la cookie.
+- `Literal[int]` no convierte `?days=7` (cadena) en FastAPI: validar con
+  `Annotated[int, AfterValidator]` y probar los valores válidos por HTTP.
 
 ## Próximos pasos
 
-- Sincronizar HU-11 y HU-12 con `develop` y abrir PRs contra `develop`.
+- Force-push de HU-21, HU-11 y HU-12; abrir PRs contra `develop`.
 - HU-21 T7..T10: drawer, marcadores, logout y cierre.
-- HU-12: contrato de tickets, agregación, endpoint y panel de SLA.
 - Integrar los módulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos preexistentes de precedencia 401/404.

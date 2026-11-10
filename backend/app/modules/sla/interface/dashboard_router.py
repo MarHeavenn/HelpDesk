@@ -6,13 +6,14 @@ el rol no autorizado a un 404 uniforme. No accede a las tablas internas
 de `tickets`: usa su contrato de lectura.
 """
 
-from typing import Literal
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import AfterValidator, BaseModel
 
 from app.modules.identity.interface.dependencies import get_current_user
 from app.modules.sla.application.dashboard import (
+    PERIOD_DAYS,
     SlaDashboard,
     SlaDashboardAccessDeniedError,
     SlaDashboardTicket,
@@ -24,6 +25,16 @@ from app.modules.tickets.interface.sla_contract import (
 )
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+
+
+def _validate_period_days(value: int) -> int:
+    """Acepta solo los periodos soportados por el dashboard (RF-94)."""
+    if value not in PERIOD_DAYS:
+        raise ValueError("days must be 7, 30 or 90")
+    return value
+
+
+PeriodDays = Annotated[int, AfterValidator(_validate_period_days)]
 
 
 class SlaPriorityBreakdownResponse(BaseModel):
@@ -98,7 +109,7 @@ def _to_dashboard_ticket(ticket: SlaTicketView) -> SlaDashboardTicket:
 @router.get("/sla", response_model=SlaDashboardResponse)
 def get_sla_dashboard_endpoint(
     current: dict = Depends(get_current_user),
-    days: Literal[7, 30, 90] = 30,
+    days: PeriodDays = 30,
 ) -> SlaDashboardResponse:
     """Resumen de cumplimiento; administrador global y tecnico con alcance.
 

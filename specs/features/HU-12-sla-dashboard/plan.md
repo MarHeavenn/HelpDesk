@@ -37,6 +37,7 @@ class SlaTicketView:
     id: str
     priority: str | None
     status: str
+    is_resolved: bool
     created_at: datetime
     resolved_at: datetime | None
     resolved_target_minutes: int | None
@@ -47,6 +48,7 @@ def list_sla_tickets() -> list[SlaTicketView]: ...
 ```
 
 - Solo lectura; no expone título, descripción, solicitante, correo ni credenciales.
+- `is_resolved` lo deriva el contrato del estado del ticket; la agregación de `sla` no compara nombres de estado.
 - Toma una instantánea del repositorio de tickets; no muta nada.
 - El router de SLA mapea cada `SlaTicketView` a la estructura de la agregación; la capa `application` de `sla` no importa `tickets`.
 

@@ -15,11 +15,12 @@ No se modifica el backend.
   - Hecho cuando: el armazón muestra logo, espacio de trabajo, navegación filtrada por rol, sección inferior, pie, buscador con ⌘K/Ctrl+K, campana, avatar/nombre/rol con menú, botón de ayuda y `PageHeader`; el ítem activo usa `aria-current="page"`; tests de render y navegación por rol en verde.
 - [x] **T6. Routing, guards y 404.** RF-69, RF-71, RF-73
   - Hecho cuando: todas las rutas de RF-69 existen; `RequireAuth` redirige a `/login`; `RequireRole` redirige a la primera ruta permitida con aviso una vez; `*` muestra 404 con enlace de salida; `/cuenta` redirige a `/cuenta/perfil`; tests de visitante, login autenticado, rol denegado y ruta desconocida en verde.
-- [ ] **T7. Drawer móvil y accesibilidad.** RF-74, RF-75
+- [x] **T7. Drawer móvil y accesibilidad.** RF-74, RF-75
   - Hecho cuando: en <1024 px el sidebar se abre con un botón, se cierra con Escape/capa/ruta, atrapa el foco y lo devuelve; el contenido ocupa el ancho; existe enlace «Saltar al contenido», regiones semánticas, `aria-expanded`/`aria-controls`, foco visible y etiquetas accesibles; tests de apertura, cierre y foco en verde.
-- [ ] **T8. Páginas marcador y estados de sesión.** RF-78, RF-80
+- [x] **T8. Páginas marcador y estados de sesión.** RF-78, RF-80
   - Hecho cuando: Técnicos, SLA, Usuarios, Empresas y Notificaciones muestran título, «Próximamente» y enlace de salida, sin datos ni acciones falsas; el armazón muestra carga mientras valida la sesión y error con «Reintentar» si falla la red, sin borrar la sesión salvo 401; tests en verde.
-- [ ] **T9. Logout y cierre de sesión.** RF-76
+- [x] **T9. Logout y cierre de sesión.** RF-76
   - Hecho cuando: «Cerrar sesión» del menú y de `/cuenta/perfil` llama a `POST /api/auth/logout`, limpia contexto y `localStorage`, redirige a `/login` y no deja contenido protegido; un 401 posterior repite el cierre; tests de logout y 401 en verde.
 - [ ] **T10. Pruebas de cierre, build y smoke.** RF-69 a RF-80
   - Hecho cuando: `npm run test` y `npm run build` pasan; smoke manual con las tres cuentas en 360, 768, 1024 y 1440 px; `MEMORY.md` actualizado; no hay RF sin cubrir o se documenta la brecha.
+  - Estado: suite (104 tests), `lint` y `build` en verde. **Pendiente:** smoke manual en navegador con las tres cuentas y los cuatro anchos.

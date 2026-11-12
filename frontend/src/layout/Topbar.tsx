@@ -1,9 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import {
   Bell,
   ChevronDown,
   CircleHelp,
   LogOut,
+  Menu,
   Search,
   UserRound,
 } from 'lucide-react'
@@ -17,13 +18,21 @@ import type { AuthUser } from '@/types/domain'
 export default function Topbar({
   user,
   onLogout,
+  onOpenMenu,
+  menuOpen,
+  menuControls,
+  menuButtonRef,
 }: {
   user: AuthUser
   onLogout: () => void | Promise<void>
+  onOpenMenu: () => void
+  menuOpen: boolean
+  menuControls: string
+  menuButtonRef: RefObject<HTMLButtonElement>
 }) {
   const searchRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuId = useId()
 
   useEffect(() => {
@@ -39,16 +48,16 @@ export default function Topbar({
   }, [])
 
   useEffect(() => {
-    if (!menuOpen) return
+    if (!userMenuOpen) return
 
     function handlePointerDown(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false)
+        setUserMenuOpen(false)
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key === 'Escape') setUserMenuOpen(false)
     }
 
     document.addEventListener('mousedown', handlePointerDown)
@@ -57,15 +66,27 @@ export default function Topbar({
       document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [menuOpen])
+  }, [userMenuOpen])
 
   function handleLogout() {
-    setMenuOpen(false)
+    setUserMenuOpen(false)
     void onLogout()
   }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+      <button
+        ref={menuButtonRef}
+        type="button"
+        aria-label={strings.shell.openMenu}
+        aria-expanded={menuOpen}
+        aria-controls={menuControls}
+        onClick={onOpenMenu}
+        className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:hidden"
+      >
+        <Menu className="h-5 w-5" aria-hidden="true" />
+      </button>
+
       <form role="search" onSubmit={(event) => event.preventDefault()} className="min-w-0 flex-1 md:max-w-md">
         <label htmlFor="global-search" className="sr-only">
           {strings.common.search}
@@ -113,10 +134,10 @@ export default function Topbar({
             <button
               type="button"
               aria-haspopup="menu"
-              aria-expanded={menuOpen}
+              aria-expanded={userMenuOpen}
               aria-controls={menuId}
               aria-label={`${strings.shell.userMenu}: ${user.name}`}
-              onClick={() => setMenuOpen((open) => !open)}
+              onClick={() => setUserMenuOpen((open) => !open)}
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <Avatar name={user.name} />
@@ -134,17 +155,26 @@ export default function Topbar({
               />
             </button>
 
-            {menuOpen ? (
+            {userMenuOpen ? (
               <div
                 id={menuId}
                 role="menu"
                 aria-label={strings.shell.userMenu}
                 className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
               >
+                <div role="presentation" className="border-b border-slate-200 px-4 py-3">
+                  <p className="truncate text-sm font-semibold text-slate-900">
+                    {user.name || user.email}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">{user.email}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {strings.roles[user.role]}
+                  </p>
+                </div>
                 <Link
                   to="/cuenta/perfil"
                   role="menuitem"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => setUserMenuOpen(false)}
                   className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
                 >
                   <UserRound className="h-4 w-4" aria-hidden="true" />

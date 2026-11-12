@@ -135,6 +135,12 @@ describe('AppShell', () => {
     await user.click(trigger)
 
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(
+      screen.getByRole('menu', { name: 'Menú de usuario' }),
+    ).toHaveTextContent('admin@helpdesk.dev')
+    expect(
+      screen.getByRole('menu', { name: 'Menú de usuario' }),
+    ).toHaveTextContent('Administrador')
     expect(screen.getByRole('menuitem', { name: 'Mi perfil' })).toBeInTheDocument()
     expect(
       screen.getByRole('menuitem', { name: 'Cerrar sesión' }),

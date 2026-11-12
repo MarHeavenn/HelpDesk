@@ -3,9 +3,10 @@
 ## Estado actual
 
 - HU-01..HU-10 y HU-14 **mergeadas en `develop`** (backend en memoria).
-- Suite backend sin Docker: **1183 passed, 14 skipped**; frontend: **88 passed**.
+- Suite backend sin Docker: **1183 passed, 14 skipped**; frontend: **104 passed**.
 - `HU-20` con ADR/spec/plan/tareas y sin código. `HU-21` (frontend shell)
-  T1..T6 completas; `HU-11` T1..T8 y `HU-12` T1..T7 completas en sus ramas.
+  T1..T9 completas (T10 pendiente del smoke manual); `HU-11` T1..T8 y
+  `HU-12` T1..T7 completas en sus ramas y en `develop`.
 - HU-11: dashboard real de tickets en `/` (`GET /api/dashboard/tickets`);
   administrador global, técnico asignados, cliente 404.
 - HU-12: `GET /api/dashboard/sla` + panel «Cumplimiento de SLA» en `/`;
@@ -29,6 +30,11 @@
 - HU-12: el agregado vive en `sla/application/dashboard.py`; `tickets/interface/
   sla_contract.py` expone la vista mínima; el panel consume datos reales y no
   duplica la política ni el umbral.
+- HU-21: drawer móvil propio (sin librería) con foco atrapado, `aria-expanded`
+  y cierre por Escape/capa/ruta/umbral 1024 px; el contenido de la barra lateral
+  se comparte entre la versión fija y el panel. `/cuenta/perfil` es un perfil
+  mínimo con identidad real y «Cerrar sesión»; el menú del encabezado muestra
+  nombre, correo y rol.
 
 ## Entorno local
 
@@ -57,6 +63,7 @@
 ## Próximos pasos
 
 - Force-push de HU-21, HU-11 y HU-12; abrir PRs contra `develop`.
-- HU-21 T7..T10: drawer, marcadores, logout y cierre.
+- HU-21 T10: smoke manual en 360/768/1024/1440 px con las tres cuentas y PR
+  contra `develop`.
 - Integrar los módulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos preexistentes de precedencia 401/404.

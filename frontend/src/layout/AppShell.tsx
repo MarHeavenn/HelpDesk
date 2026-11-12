@@ -1,14 +1,24 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 
 import { useAuth } from '@/context/AuthContext'
 import { strings } from '@/lib/strings'
+import MobileSidebar from '@/layout/MobileSidebar'
 import Sidebar from '@/layout/Sidebar'
 import Topbar from '@/layout/Topbar'
 
+const DESKTOP_QUERY = '(min-width: 1024px)'
+
 /**
- * Armazón compartido de las rutas protegidas (RF-70, RF-72, RF-79).
+ * Armazón compartido de las rutas protegidas (RF-70, RF-72, RF-74, RF-79).
  * Acepta `children` para pruebas y composición; sin ellos renderiza el Outlet.
  */
 export default function AppShell({ children }: { children?: ReactNode }) {
@@ -16,6 +26,11 @@ export default function AppShell({ children }: { children?: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [deniedNotice, setDeniedNotice] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const drawerId = useId()
+
+  const closeMobileMenu = useCallback(() => setMobileOpen(false), [])
 
   useEffect(() => {
     const state = location.state as { denied?: boolean } | null
@@ -27,6 +42,23 @@ export default function AppShell({ children }: { children?: ReactNode }) {
       state: null,
     })
   }, [location, navigate])
+
+  // El panel móvil se cierra al cambiar de ruta (RF-74).
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
+  // Al cruzar el umbral de 1024 px el estado móvil se descarta (RF-74).
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const query = window.matchMedia(DESKTOP_QUERY)
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileOpen(false)
+    }
+
+    query.addEventListener('change', handleChange)
+    return () => query.removeEventListener('change', handleChange)
+  }, [])
 
   if (!user) return null
 
@@ -47,11 +79,26 @@ export default function AppShell({ children }: { children?: ReactNode }) {
         {strings.app.skipToContent}
       </a>
 
+      <MobileSidebar
+        id={drawerId}
+        open={mobileOpen}
+        role={user.role}
+        onClose={closeMobileMenu}
+        returnFocusRef={menuButtonRef}
+      />
+
       <div className="lg:flex lg:min-h-screen">
         <Sidebar role={user.role} />
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <Topbar user={user} onLogout={handleLogout} />
+          <Topbar
+            user={user}
+            onLogout={handleLogout}
+            onOpenMenu={() => setMobileOpen(true)}
+            menuOpen={mobileOpen}
+            menuControls={drawerId}
+            menuButtonRef={menuButtonRef}
+          />
 
           <main
             id="contenido-principal"

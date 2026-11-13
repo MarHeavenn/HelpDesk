@@ -3,10 +3,11 @@
 ## Estado actual
 
 - HU-01..HU-10 y HU-14 **mergeadas en `develop`** (backend en memoria).
-- Suite backend sin Docker: **1183 passed, 14 skipped**; frontend: **104 passed**.
-- `HU-20` con ADR/spec/plan/tareas y sin código. `HU-21` (frontend shell)
-  T1..T9 completas (T10 pendiente del smoke manual); `HU-11` T1..T8 y
-  `HU-12` T1..T7 completas en sus ramas y en `develop`.
+- Suite backend sin Docker: **1183 passed, 14 skipped**; frontend: **115 passed**.
+- `HU-20` T14 (crear ticket real) implementada sobre HU-21; quedan T13 (mis
+  tickets) y T15 (detalle y acciones), entre otras. `HU-21` T1..T9 completas
+  (T10 pendiente del smoke manual); `HU-11` T1..T8 y `HU-12` T1..T7 completas
+  en sus ramas y en `develop`.
 - HU-11: dashboard real de tickets en `/` (`GET /api/dashboard/tickets`);
   administrador global, técnico asignados, cliente 404.
 - HU-12: `GET /api/dashboard/sla` + panel «Cumplimiento de SLA» en `/`;
@@ -35,6 +36,10 @@
   se comparte entre la versión fija y el panel. `/cuenta/perfil` es un perfil
   mínimo con identidad real y «Cerrar sesión»; el menú del encabezado muestra
   nombre, correo y rol.
+- Alta de ticket (HU-20 T14): `/tickets/nuevo` con `POST /api/tickets` y
+  `PUT .../priority` para admin/técnico; validación del contrato HU-02
+  (1–200 / 1–5000 tras recortar); el cliente no elige prioridad y el objetivo
+  de SLA solo lo ve el administrador (`GET /api/sla/policies` es suyo).
 
 ## Entorno local
 
@@ -65,5 +70,7 @@
 - Force-push de HU-21, HU-11 y HU-12; abrir PRs contra `develop`.
 - HU-21 T10: smoke manual en 360/768/1024/1440 px con las tres cuentas y PR
   contra `develop`.
+- Conectar el resto de vistas reales: mis tickets (T13), listado de todos los
+  tickets y detalle/acciones (T15), técnicos y SLA.
 - Integrar los módulos con PostgreSQL en una tarea aparte.
 - Revisar los 3 tests fallidos preexistentes de precedencia 401/404.

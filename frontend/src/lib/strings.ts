@@ -148,6 +148,44 @@ export const strings = {
     noSession: 'No hay una sesión activa',
     sessionReady: 'La estructura de navegación llega en la siguiente tarea.',
   },
+  createTicket: {
+    subtitle:
+      'Describe el problema y nuestro equipo de soporte se encargará del resto.',
+    cardTitle: 'Información de la solicitud',
+    cardSubtitle:
+      'Incluye todos los detalles necesarios para que podamos ayudarte más rápido.',
+    title: 'Título del ticket',
+    titlePlaceholder: 'Ej. No puedo acceder al servidor de archivos',
+    titleHelp: 'Resume el problema en una frase clara.',
+    titleRequired: 'El título es obligatorio.',
+    titleTooLong: 'El título admite como máximo 200 caracteres.',
+    description: 'Descripción del problema',
+    descriptionPlaceholder:
+      'Describe qué sucede, cuándo comenzó y qué acciones intentaste...',
+    descriptionHelp: 'No incluyas contraseñas ni información confidencial.',
+    descriptionRequired: 'La descripción es obligatoria.',
+    descriptionTooLong: 'La descripción admite como máximo 5000 caracteres.',
+    priority: 'Prioridad',
+    loadingSla: 'Consultando el tiempo objetivo de SLA...',
+    target: (priority: string, hours: string) =>
+      `Tiempo objetivo para prioridad ${priority.toLocaleLowerCase('es-CO')}: ${hours}`,
+    assignmentTitle: 'Asignación automática',
+    assignmentStaff:
+      'La fecha, la hora y el solicitante se registran con tu sesión. El ticket queda Abierto y sin técnico asignado.',
+    assignmentClient:
+      'La fecha, la hora y el solicitante se registran con tu sesión. El ticket queda Abierto, sin prioridad y sin técnico; un administrador o un técnico definirá la prioridad.',
+    submit: 'Crear ticket',
+    submitting: 'Creando...',
+    networkError:
+      'No se pudo crear el ticket. Revisa tu conexión e inténtalo de nuevo.',
+    priorityFailed: (id: string, detail: string) =>
+      `El ticket ${id} se creó, pero no se pudo guardar la prioridad. ${detail}`,
+    created: (id: string) => `Ticket creado. Identificador ${id}.`,
+    discardTitle: '¿Descartar el ticket?',
+    discardBody: 'Los datos escritos se perderán.',
+    discardConfirm: 'Descartar',
+    keepEditing: 'Seguir editando',
+  },
   common: {
     loading: 'Cargando...',
     retry: 'Reintentar',

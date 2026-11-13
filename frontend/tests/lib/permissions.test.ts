@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   APP_ROUTES,
+  canReadSlaPolicies,
+  canSetTicketPriority,
   canView,
   firstAllowedRoute,
   navItems,
@@ -93,5 +95,15 @@ describe('matriz de permisos', () => {
     expect(routeTitle('/tickets')).toBe('Todos los tickets')
     expect(routeTitle('/cuenta/perfil')).toBe('Mi perfil')
     expect(routeTitle('/no-existe')).toBe('Página no encontrada')
+  })
+
+  it('limita la prioridad y la política de SLA según el rol', () => {
+    expect(canSetTicketPriority('administrador')).toBe(true)
+    expect(canSetTicketPriority('tecnico')).toBe(true)
+    expect(canSetTicketPriority('cliente')).toBe(false)
+
+    expect(canReadSlaPolicies('administrador')).toBe(true)
+    expect(canReadSlaPolicies('tecnico')).toBe(false)
+    expect(canReadSlaPolicies('cliente')).toBe(false)
   })
 })

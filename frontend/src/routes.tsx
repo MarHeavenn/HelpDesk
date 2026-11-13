@@ -4,6 +4,8 @@ import { useAuth } from '@/context/AuthContext'
 import AppShell from '@/layout/AppShell'
 import { firstAllowedRoute } from '@/lib/permissions'
 import { strings } from '@/lib/strings'
+import CreateTicketPage from '@/pages/CreateTicketPage'
+import CreatedTicketNotice from '@/pages/CreatedTicketNotice'
 import DashboardPage from '@/pages/DashboardPage'
 import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
@@ -101,15 +103,13 @@ export default function AppRoutes() {
           <Route
             path="/mis-tickets"
             element={
-              <PlaceholderPage title={strings.routes.titles['/mis-tickets']} />
+              <>
+                <CreatedTicketNotice />
+                <PlaceholderPage title={strings.routes.titles['/mis-tickets']} />
+              </>
             }
           />
-          <Route
-            path="/tickets/nuevo"
-            element={
-              <PlaceholderPage title={strings.routes.titles['/tickets/nuevo']} />
-            }
-          />
+          <Route path="/tickets/nuevo" element={<CreateTicketPage />} />
 
           <Route element={<RequireRole allow={ADMIN_ROLES} />}>
             <Route

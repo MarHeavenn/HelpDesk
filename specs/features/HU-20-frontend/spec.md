@@ -174,6 +174,13 @@ La interfaz no decide reglas de negocio: consume contratos HTTP para lo real y s
 - **D11 — El cambio de contraseña y las sesiones son simulados.** No se almacenan contraseñas en texto plano ni se modifica la contraseña real del backend. *Alternativa descartada: guardar una contraseña mock*, contraria a la constitución.
 - **D12 — La verificación es con Vitest + Testing Library y smoke manual.** El cliente HTTP se sustituye por un fake en las pruebas; no se añaden pruebas E2E ni un runner adicional. *Alternativa descartada: solo pruebas manuales*, que no permitirían verificar los RF de forma reproducible.
 
+## Revisión 2026-11-10 — datos reales y alta de ticket
+
+- **Las vistas con backend disponible usan datos reales y no llevan etiqueta «Demo».** Aplica al dashboard de tickets (RF-81 a RF-92 de HU-11, ya con `GET /api/dashboard/tickets`), al panel de SLA (HU-12) y al alta de ticket (T14). Las decisiones D2, D7 y D8 siguen vigentes solo para las vistas que aún no tienen endpoint.
+- **La validación del alta sigue el contrato de HU-02**, no los límites del ADR-004: título de 1 a 200 caracteres y descripción de 1 a 5000, contados en code points tras recortar (RF-12.2 y RF-12.3). *Motivo: el backend rechaza con 422 fuera de ese rango y el formulario debe anticipar el mismo criterio.*
+- **D4 se ajusta:** el cliente no elige prioridad en el formulario (el backend no se la acepta y no se guarda ningún metadato local que simule haberla fijado); ve una nota de que un administrador o técnico la definirá. Administrador y técnico sí eligen prioridad y esta se persiste con `PUT /api/tickets/{id}/priority`.
+- **El tiempo objetivo de SLA del formulario solo lo ve el administrador**, porque `GET /api/sla/policies` está restringido a ese rol (HU-14). El técnico conserva el selector de prioridad sin leer la política.
+
 ## Dudas abiertas
 
 Sin dudas abiertas pendientes. Las decisiones D1 a D12 cierran las ambigüedades del ADR y del alcance acordado con el usuario. Las brechas del backend (listado global, dashboard agregado, SLA, usuarios, empresas, notificaciones, perfil/seguridad y detalle de tickets ajenos) quedan documentadas y se cubren con mock etiquetado como «Demo».

@@ -1,6 +1,8 @@
-# Plan HU-20 — Frontend del MVP HelpDesk
+# Plan de referencia — Frontend del MVP HelpDesk
 
-Spec base: `specs/features/HU-20-frontend/spec.md` (Estado: aprobada; RF-41 a RF-68; decisiones D1–D12).
+> **Este plan no pertenece a una historia concreta.** Nació como plan de «HU-20 — Frontend del MVP», pero el tablero reparte el frontend en HU-21 (armazón), HU-22 (formularios), HU-23 (vistas y filtros) y HU-24 (paneles y alertas); HU-20 es validación y despliegue. Se conserva como referencia técnica transversal. El plan ejecutable de la creación y edición de tickets está en `specs/features/HU-22-create-edit-tickets/plan.md`.
+
+Spec base: `specs/frontend-mvp/spec.md` (Estado: referencia aprobada; RF-41 a RF-68; decisiones D1–D12).
 Restricción principal: **híbrido por vista**. API real para lo que ya existe en HU-01 a HU-04; mock etiquetado «Demo» para lo que el backend aún no expone. No se modifica el backend.
 
 ## 1. Stack y setup

@@ -30,6 +30,26 @@ const ticket: Ticket = {
 function fakeTicketsApi(overrides: Partial<TicketsApi> = {}): TicketsApi {
   return {
     createTicket: vi.fn(async () => ticket),
+    listMine: vi.fn(async () => []),
+    listAssigned: vi.fn(async () => []),
+    listAll: vi.fn(async () => []),
+    getTicket: vi.fn(async () => ({
+      ...ticket,
+      assignee: null,
+      requester: null,
+      sla: null,
+    })),
+    setStatus: vi.fn(async () => ticket),
+    assign: vi.fn(async () => ticket),
+    listTechnicians: vi.fn(async () => []),
+    listComments: vi.fn(async () => []),
+    addComment: vi.fn(async () => ({
+      id: 'c-1',
+      ticket_id: ticket.id,
+      body: 'Comentario',
+      author: null,
+      created_at: ticket.created_at,
+    })),
     setPriority: vi.fn(async () => ({ ...ticket, priority: 'Alta' })),
     getSlaPolicies: vi.fn(async () => [
       { priority: 'Crítica', hours: 120 },

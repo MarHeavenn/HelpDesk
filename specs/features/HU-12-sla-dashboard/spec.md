@@ -24,7 +24,7 @@ Esta historia añade un panel de cumplimiento de SLA con datos reales: un contra
 
 ## Requisitos funcionales (criterios de aceptación en EARS)
 
-> Numeración: se continúa la secuencia global del proyecto; esta historia usa RF-93 a RF-104. Fuente: tarjeta Trello «HU-12 — Dashboard de cumplimiento de SLA» y ADR-001. El panel sustituye el donut con datos mock de HU-20 (RF-51) y reutiliza el cálculo del módulo `sla` de HU-05 y la configuración administrable de HU-14.
+> Numeración: se continúa la secuencia global del proyecto; esta historia usa RF-93 a RF-104. Fuente: tarjeta Trello «HU-12 — Dashboard de cumplimiento de SLA» y ADR-001. El panel sustituye el donut con datos mock de la referencia del frontend (RF-51) y reutiliza el cálculo del módulo `sla` de HU-05 y la configuración administrable de HU-14.
 
 - RF-93: EL SISTEMA expondrá `GET /api/dashboard/sla`, que responderá 200 con el resumen de cumplimiento. SI la petición llega sin sesión válida, ENTONCES responderá 401 con el contrato de error de HU-01. SI el rol es `cliente`, ENTONCES responderá 404 uniforme, sin devolver datos.
 - RF-94: EL SISTEMA aceptará el parámetro opcional `days` con los valores `7`, `30` o `90`. SI se omite, ENTONCES usará `30`. SI se envía otro valor, ENTONCES responderá 422 con el contrato de error de validación. El periodo filtrará los tickets por fecha y hora de creación dentro de los últimos `days` días respecto de `generated_at`, incluido el límite inferior y excluidos los tickets con fecha futura.
@@ -52,7 +52,7 @@ Esta historia añade un panel de cumplimiento de SLA con datos reales: un contra
 - Fechas y horas en UTC, comparadas como instantes; la interfaz las presenta en la zona del usuario.
 - Redondeo del porcentaje a dos decimales, sin `NaN` ni `Infinity`.
 - El contrato no expone descripciones, correos ni credenciales.
-- Sin dependencias nuevas para el cálculo; la interfaz reutiliza los componentes, el cliente HTTP y el sistema de periodos de HU-20/HU-21.
+- Sin dependencias nuevas para el cálculo; la interfaz reutiliza los componentes, el cliente HTTP y el sistema de periodos de la referencia del frontend/HU-21.
 
 ## Casos límite
 
@@ -89,7 +89,7 @@ Esta historia añade un panel de cumplimiento de SLA con datos reales: un contra
 
 ## Decisiones de alcance adoptadas
 
-1. **Datos reales, sin mock.** El panel sustituye el donut mock de HU-20 RF-51.
+1. **Datos reales, sin mock.** El panel sustituye el donut mock de la referencia del frontend RF-51.
 2. **Cuatro estados de SLA.** `en_tiempo`, `en_riesgo`, `cumplido` e `incumplido`; el porcentaje de cumplimiento suma `en_tiempo + cumplido` sobre el total evaluado. `en_riesgo` todavía no es incumplimiento.
 3. **Umbral de riesgo del 20 %.** Se reutiliza `RISK_THRESHOLD_RATIO` del módulo `sla`; el valor se devuelve en `threshold_percent` para que la interfaz no lo duplique.
 4. **Política vigente administrada por HU-14.** La semilla es 2/4/12/24 horas; HU-12 la lee a través de `target_minutes_for`/`calculate_ticket_sla` en cada consulta, sin duplicarla ni cachearla.

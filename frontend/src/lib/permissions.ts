@@ -61,6 +61,21 @@ export function canReadSlaPolicies(role: Rol): boolean {
   return role === 'administrador'
 }
 
+/** Solo administrador y técnico cambian el estado de un ticket (HU-03, HU-08). */
+export function canChangeTicketStatus(role: Rol): boolean {
+  return role === 'administrador' || role === 'tecnico'
+}
+
+/** Solo el administrador asigna técnico (HU-04, RF-38). */
+export function canAssignTicket(role: Rol): boolean {
+  return role === 'administrador'
+}
+
+/** Solo administrador y técnico escriben seguimiento (HU-07). */
+export function canCommentTicket(role: Rol): boolean {
+  return role === 'administrador' || role === 'tecnico'
+}
+
 export type NavIcon =
   | 'dashboard'
   | 'tickets'

@@ -27,7 +27,7 @@ HU-13 (gestión de usuarios y roles) todavía no está implementada. Por eso las
 
 ## Requisitos funcionales (criterios de aceptación en EARS)
 
-> Numeración: se continúa la secuencia global del proyecto, que llega a RF-68 en `specs/features/HU-20-frontend/spec.md`; esta historia usa RF-69 a RF-80. Fuente: tarjeta Trello «HU-21 — Diseñar la estructura visual y navegación del sistema» y ADR-000 (`ADR-HelpDesk-frontend.md`, secciones 2, 3 y 5). Esta historia sustituye, para el armazón y la navegación, lo previsto en HU-20 (RF-41, RF-42, RF-64 y RF-65); no cambia el resto de HU-20.
+> Numeración: se continúa la secuencia global del proyecto, que llega a RF-68 en `specs/frontend-mvp/spec.md` (especificación de referencia del frontend); esta historia usa RF-69 a RF-80. Fuente: tarjeta Trello «HU-21 — Diseñar la estructura visual y navegación del sistema» y ADR-000 (`ADR-HelpDesk-frontend.md`, secciones 2, 3 y 5). Esta historia sustituye, para el armazón y la navegación, lo previsto en la referencia (RF-41, RF-42, RF-64 y RF-65); no cambia el resto de la referencia.
 
 - RF-69: EL SISTEMA expondrá las rutas `/login`, `/`, `/tickets`, `/mis-tickets`, `/tickets/nuevo`, `/tecnicos`, `/sla`, `/usuarios`, `/empresas`, `/notificaciones`, `/cuenta/perfil` y una ruta comodín para direcciones desconocidas. SI un visitante sin sesión válida solicita una ruta distinta de `/login`, ENTONCES será redirigido a `/login` sin mostrar el contenido protegido. SI un usuario con sesión válida solicita `/login`, ENTONCES será redirigido a la primera ruta permitida para su rol.
 - RF-70: CUANDO un usuario autenticado acceda a cualquier ruta protegida, EL SISTEMA mostrará un armazón compartido con barra lateral, encabezado y área de contenido. La barra lateral contendrá el logotipo y nombre «HelpDesk», la tarjeta del espacio de trabajo, la navegación principal, una sección inferior y el pie «HelpDesk v1.1 · Prototipo». El encabezado contendrá el buscador global con atajo ⌘K/Ctrl+K, la campana de notificaciones, el avatar, el nombre y el rol del usuario con su menú, y el botón de ayuda. El área de contenido alojará la vista activa sin duplicar el armazón.
@@ -64,8 +64,8 @@ HU-13 (gestión de usuarios y roles) todavía no está implementada. Por eso las
 
 - Contenido funcional de tickets, dashboards, administración y cuenta (HU-11, HU-12, HU-22, HU-23, HU-24 y las historias de backend correspondientes).
 - Gestión real de usuarios y roles (HU-13): las rutas de usuarios y empresas quedan como marcadores.
-- Personalización de tema, acento y densidad (HU-20, RF-50).
-- Registro de clientes desde la pantalla de acceso: esta historia solo implementa el acceso; el registro pertenece a HU-01/HU-20.
+- Personalización de tema, acento y densidad (referencia del frontend, RF-50).
+- Registro de clientes desde la pantalla de acceso: esta historia solo implementa el acceso; el registro pertenece a HU-01 y a la pantalla de acceso.
 - Selector de rol para demostración.
 - Cambios en el backend, en los contratos de autenticación o en la base de datos.
 

@@ -63,6 +63,19 @@ function renderRoutes(route: string) {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
 
+  // Las vistas de tickets consultan la API real: se responde vacío para no
+  // depender de la red ni disparar el cierre de sesión por un 401.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response('[]', {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ),
+  )
+
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider api={createAuthApi(ADMIN)}>
@@ -76,6 +89,7 @@ function renderRoutes(route: string) {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   localStorage.clear()
 })
 

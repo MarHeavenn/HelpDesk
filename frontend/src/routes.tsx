@@ -5,12 +5,13 @@ import AppShell from '@/layout/AppShell'
 import { firstAllowedRoute } from '@/lib/permissions'
 import { strings } from '@/lib/strings'
 import CreateTicketPage from '@/pages/CreateTicketPage'
-import CreatedTicketNotice from '@/pages/CreatedTicketNotice'
 import DashboardPage from '@/pages/DashboardPage'
 import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import MyTicketsPage from '@/pages/MyTicketsPage'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 import ProfilePage from '@/pages/ProfilePage'
+import TicketsPage from '@/pages/TicketsPage'
 import type { Rol } from '@/types/domain'
 
 const ADMIN_ROLES: readonly Rol[] = ['administrador']
@@ -92,23 +93,10 @@ export default function AppRoutes() {
         <Route element={<AppShell />}>
           <Route element={<RequireRole allow={STAFF_ROLES} />}>
             <Route path="/" element={<DashboardPage />} />
-            <Route
-              path="/tickets"
-              element={
-                <PlaceholderPage title={strings.routes.titles['/tickets']} />
-              }
-            />
+            <Route path="/tickets" element={<TicketsPage />} />
           </Route>
 
-          <Route
-            path="/mis-tickets"
-            element={
-              <>
-                <CreatedTicketNotice />
-                <PlaceholderPage title={strings.routes.titles['/mis-tickets']} />
-              </>
-            }
-          />
+          <Route path="/mis-tickets" element={<MyTicketsPage />} />
           <Route path="/tickets/nuevo" element={<CreateTicketPage />} />
 
           <Route element={<RequireRole allow={ADMIN_ROLES} />}>

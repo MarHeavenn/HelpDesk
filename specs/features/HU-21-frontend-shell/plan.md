@@ -1,7 +1,7 @@
 # Plan HU-21 — Estructura visual y navegación del sistema
 
 Spec base: `specs/features/HU-21-frontend-shell/spec.md` (aprobada; RF-69 a RF-80).
-Referencias: ADR-000 §2, §3 y §5; plan de HU-20 §1, §2, §6, §8 y §11.
+Referencias: ADR-000 §2, §3 y §5; plan de referencia del frontend (`specs/frontend-mvp/plan.md`) §1, §2, §6, §8 y §11.
 Alcance: scaffold del frontend, sesión real, armazón, navegación por rol, rutas y guards. No incluye el contenido de tickets, dashboards ni administración.
 
 ## 1. Stack y setup
@@ -63,7 +63,7 @@ frontend/
     routes/guards.test.tsx
 ```
 
-La estructura es un subconjunto de la de HU-20: las páginas de dashboard, tickets y administración se añaden en sus historias.
+La estructura es un subconjunto de la de la referencia del frontend: las páginas de dashboard, tickets y administración se añaden en sus historias.
 
 ## 3. Sesión y autenticación (RF-69, RF-76, RF-77, RF-80)
 
@@ -144,7 +144,7 @@ La estructura es un subconjunto de la de HU-20: las páginas de dashboard, ticke
 
 ## 9. Decisiones justificadas
 
-- **D1. Reutilizar el stack y la estructura de HU-20.** Evita dos configuraciones de frontend y permite que HU-11/HU-12/HU-22/HU-23/HU-24 se añadan sin refactor. *Alternativa descartada: otro framework o Create React App*, cambia el ADR y añade deuda.
+- **D1. Reutilizar el stack y la estructura de la referencia del frontend.** Evita dos configuraciones de frontend y permite que HU-11/HU-12/HU-22/HU-23/HU-24 se añadan sin refactor. *Alternativa descartada: otro framework o Create React App*, cambia el ADR y añade deuda.
 - **D2. Autenticación real, sin selector de rol.** El rol viene de la sesión de HU-01. *Alternativa descartada: selector demo*, incompatible con permisos reales.
 - **D3. Guards por matriz, no por render condicional disperso.** Una sola fuente de permisos. *Alternativa descartada: condicionales por página*, duplica reglas y permite rutas no autorizadas.
 - **D4. Marcadores en lugar de datos inventados.** Las secciones sin backend no simulan funcionalidad. *Alternativa descartada: mocks por sección*, confunde el estado real y adelanta historias ajenas.
@@ -156,9 +156,9 @@ La estructura es un subconjunto de la de HU-20: las páginas de dashboard, ticke
 - **Backend en memoria**: al reiniciar el backend se pierden usuarios y sesiones; el frontend vuelve a `/login`.
 - **`me` no devuelve nombre**: se conserva el del login en `localStorage` por id; si falta, se muestra el correo.
 - **HU-13 pendiente**: usuarios y empresas quedan como marcadores; no se implementa su contenido.
-- **Sin campana real**: el icono existe, pero el conteo de notificaciones llega con HU-20/HU-24.
+- **Sin campana real**: el icono existe, pero el conteo de notificaciones llega con HU-24.
 - **Buscador global**: en esta historia solo enfoca el campo; la navegación con resultados llega con HU-23.
-- **Tailwind/React/Router mayores**: se fijan versiones compatibles con HU-20 para evitar breaking changes.
+- **Tailwind/React/Router mayores**: se fijan versiones compatibles con la referencia del frontend para evitar breaking changes.
 
 ## 11. Dudas abiertas
 

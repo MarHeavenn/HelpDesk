@@ -55,6 +55,7 @@ from app.modules.tickets.application.get_ticket import (
     TicketNotFoundError,
     get_ticket_detail,
 )
+from app.modules.tickets.application.list_all_tickets import list_all_tickets
 from app.modules.tickets.application.list_attention_tickets import (
     list_attention_tickets,
 )
@@ -438,6 +439,28 @@ def list_attention_tickets_endpoint(
             actor_role=current["role"],
             tickets=get_ticket_repository(),
             now=now,
+        )
+    except TicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return [ticket_summary(ticket, now) for ticket in tickets]
+
+
+@router.get("/all", response_model=list[TicketSummaryResponse])
+def list_all_tickets_endpoint(
+    current: dict = Depends(get_current_user),
+) -> list[TicketSummaryResponse]:
+    """Lista todos los tickets del sistema (HU-23, RF-122).
+
+    Declarada antes de `GET /{ticket_id}` para que la ruta estatica se case
+    primero y no capture `"all"` como un `ticket_id`. Solo administrador y
+    tecnico reciben datos; un cliente obtiene el 404 uniforme y, sin sesion
+    valida, `get_current_user` responde 401 antes del handler (RF-122).
+    """
+    now = datetime.now(timezone.utc)
+    try:
+        tickets = list_all_tickets(
+            actor_role=current["role"],
+            tickets=get_ticket_repository(),
         )
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

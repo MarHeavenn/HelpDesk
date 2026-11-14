@@ -25,7 +25,7 @@ Esta historia añade un dashboard de tickets con datos reales: un contrato HTTP 
 
 ## Requisitos funcionales (criterios de aceptación en EARS)
 
-> Numeración: se continúa la secuencia global del proyecto; esta historia usa RF-81 a RF-92. Fuente: tarjeta Trello «HU-11 — Dashboard de tickets» y ADR-001. Sustituye el dashboard con datos mock de HU-20 (RF-51): el dashboard pasa a usar datos reales. El gráfico de actividad con rangos 7/30/90 días de ADR-001 queda para HU-24; esta historia solo entrega los conteos y los recientes.
+> Numeración: se continúa la secuencia global del proyecto; esta historia usa RF-81 a RF-92. Fuente: tarjeta Trello «HU-11 — Dashboard de tickets» y ADR-001. Sustituye el dashboard con datos mock de la referencia del frontend (RF-51): el dashboard pasa a usar datos reales. El gráfico de actividad con rangos 7/30/90 días de ADR-001 queda para HU-24; esta historia solo entrega los conteos y los recientes.
 
 - RF-81: EL SISTEMA expondrá `GET /api/dashboard/tickets`, que responderá 200 con un resumen agregado de tickets. SI la petición llega sin sesión válida, ENTONCES responderá 401 con el mismo contrato de error de HU-01. SI el rol es `cliente`, ENTONCES responderá 404 uniforme, sin devolver datos ni revelar la existencia de tickets.
 - RF-82: CUANDO un administrador solicite el resumen, EL SISTEMA agregará todos los tickets existentes en el sistema, sin filtrar por solicitante ni por técnico.
@@ -47,7 +47,7 @@ Esta historia añade un dashboard de tickets con datos reales: un contrato HTTP 
 - Los conteos se derivan de la fuente de tickets existente; no se duplican ni se almacenan en una tabla nueva.
 - El contrato no expone descripciones, correos, credenciales ni datos personales distintos del nombre del técnico.
 - Las fechas se devuelven en ISO 8601 con zona UTC, coherentes con los contratos de HU-02 a HU-04.
-- Sin dependencias nuevas para el agregado; la interfaz puede reutilizar los componentes y el cliente HTTP de HU-20/HU-21.
+- Sin dependencias nuevas para el agregado; la interfaz puede reutilizar los componentes y el cliente HTTP de la referencia del frontend/HU-21.
 
 ## Casos límite
 
@@ -80,7 +80,7 @@ Esta historia añade un dashboard de tickets con datos reales: un contrato HTTP 
 
 ## Decisiones de alcance adoptadas
 
-1. **Datos reales, sin mock.** El dashboard deja de usar el seed mock de HU-20 RF-51. La fuente es el contrato de RF-81.
+1. **Datos reales, sin mock.** El dashboard deja de usar el seed mock de la referencia del frontend RF-51. La fuente es el contrato de RF-81.
 2. **Administrador global; técnico con alcance propio.** Se mantiene la matriz de ADR-001 y HU-20 RF-51: el técnico ve solo sus tickets asignados.
 3. **Cliente sin acceso.** Se responde 404 uniforme en el contrato y redirección en la interfaz, coherente con el criterio de no revelación del proyecto.
 4. **Prioridad y asignación vacías son categorías explícitas.** `sin_prioridad` y `sin_asignar` evitan que los totales no cuadren.
@@ -89,4 +89,4 @@ Esta historia añade un dashboard de tickets con datos reales: un contrato HTTP 
 
 ## Dudas abiertas
 
-- Ninguna pendiente. El diseño visual exacto de las tarjetas y la tabla se concreta en el plan, reutilizando ADR-001 y los componentes de HU-20/HU-21.
+- Ninguna pendiente. El diseño visual exacto de las tarjetas y la tabla se concreta en el plan, reutilizando ADR-001 y los componentes de la referencia del frontend/HU-21.

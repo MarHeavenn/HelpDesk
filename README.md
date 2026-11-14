@@ -87,6 +87,17 @@ Variables disponibles: `HOST`, `PORT`, `DEV_ADMIN_NAME`, `DEV_ADMIN_EMAIL`, `DEV
 
 No se deben guardar contraseñas reales en el repositorio.
 
+### Smoke manual de tickets
+
+`backend/smoke_manual.py` recorre los flujos de las tres cuentas contra la API real: arranca `uvicorn` en un puerto libre, siembra un administrador y dos técnicos en memoria y verifica el alta, los listados, la prioridad, el estado, la asignación, los comentarios, el cierre, la reapertura y los permisos por rol. No usa mocks ni `TestClient`.
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe smoke_manual.py
+```
+
+Cada comprobación se imprime como `OK`; el proceso termina con código 0 si todo pasa y 1 si algo falla. Los datos viven en memoria y desaparecen al terminar. Variables opcionales: `SMOKE_HOST` y `SMOKE_PORT`.
+
 > **Persistencia en memoria:** al detener el servidor se pierden los tickets y los usuarios registrados. Los usuarios demo se recrean en cada arranque. PostgreSQL todavía no está conectado.
 
 ## Flujo de ramas y entrega

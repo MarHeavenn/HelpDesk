@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   APP_ROUTES,
+  canAssignTicket,
+  canChangeTicketStatus,
+  canCommentTicket,
   canReadSlaPolicies,
   canSetTicketPriority,
   canView,
@@ -105,5 +108,18 @@ describe('matriz de permisos', () => {
     expect(canReadSlaPolicies('administrador')).toBe(true)
     expect(canReadSlaPolicies('tecnico')).toBe(false)
     expect(canReadSlaPolicies('cliente')).toBe(false)
+  })
+
+  it('limita el detalle: estado, asignación y comentarios por rol', () => {
+    for (const role of ['administrador', 'tecnico'] as Rol[]) {
+      expect(canChangeTicketStatus(role)).toBe(true)
+      expect(canCommentTicket(role)).toBe(true)
+    }
+    expect(canChangeTicketStatus('cliente')).toBe(false)
+    expect(canCommentTicket('cliente')).toBe(false)
+
+    expect(canAssignTicket('administrador')).toBe(true)
+    expect(canAssignTicket('tecnico')).toBe(false)
+    expect(canAssignTicket('cliente')).toBe(false)
   })
 })

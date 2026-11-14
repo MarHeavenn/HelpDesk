@@ -1,4 +1,6 @@
-# Tareas HU-20 — Frontend del MVP HelpDesk
+# Tareas de referencia — Frontend del MVP HelpDesk
+
+> **Este listado no pertenece a una historia concreta.** Nació como tareas de «HU-20 — Frontend del MVP» y se conserva como mapa del trabajo frontend. Las tareas de creación y edición de tickets se ejecutan en `specs/features/HU-22-create-edit-tickets/tasks.md`; las vistas con filtros irán a HU-23 y los paneles a HU-24. HU-20 es validación y despliegue.
 
 Orden de dependencia. 20–30 min por tarea (si una crece, se divide). Tests primero (en rojo), luego implementación hasta verde. Verificación: `npm run test` y `npm run build` desde `frontend/`.
 Fuente de datos: híbrido por vista (API real donde existe; mock «Demo» donde falta). No se modifica el backend.
@@ -34,8 +36,8 @@ Fuente de datos: híbrido por vista (API real donde existe; mock «Demo» donde 
   - Hecho cuando: `/tickets` muestra la tabla del ADR-002 con búsqueda debounce, filtros combinables, orden, contador, paginación de 10, query string y estados vacío/error; las acciones de fila abren el detalle mock; tests de filtros, búsqueda, orden, paginación y URL en verde.
 - [ ] **T13. Mis tickets reales.** RF-54
   - Hecho cuando: `/mis-tickets` usa `GET /api/assignments/mine` para técnico y `GET /api/tickets` para admin/cliente; muestra tabla/filtros/orden/paginación; el cliente no ve filtro de técnico ni asignación; estados de carga/vacío/error; tests con `FakeApiClient` por rol en verde.
-- [x] **T14. Crear ticket real.** RF-55
-  - Hecho cuando: `/tickets/nuevo` valida título 1–200 y descripción 1–5000 (contrato de HU-02, revisión 2026-11-10), muestra el SLA de la prioridad solo al administrador, crea con `POST /api/tickets`, fija prioridad con `PUT .../priority` si es admin/técnico, avisa en `/mis-tickets` y redirige; cancelar con cambios confirma; **10 pruebas en verde** de validación, SLA, alta, prioridad, error de red y descarte.
+- [x] **T14. Crear ticket real.** RF-55 — **trasladada a HU-22 (T1)**.
+  - Hecho en `specs/features/HU-22-create-edit-tickets/`: `/tickets/nuevo` valida título 1–200 y descripción 1–5000 (contrato de HU-02), muestra el SLA de la prioridad solo al administrador, crea con `POST /api/tickets`, fija prioridad con `PUT .../priority` si es admin/técnico, avisa en `/mis-tickets` y redirige; cancelar con cambios confirma; **10 pruebas en verde** de validación, SLA, alta, prioridad, error de red y descarte.
 - [ ] **T15. Detalle y acciones de ticket (real y demo).** RF-53
   - Hecho cuando: el modal muestra los campos disponibles según la fuente, permite cambiar prioridad/estado (admin/técnico) y asignar (admin), actualiza la tabla y muestra toast; en tickets reales usa la API y en demo el store; tickets cerrados deshabilitan acciones; tests de apertura, acciones, errores y cierre por ESC en verde.
 - [ ] **T16. Pruebas y cierre del incremento 2.** RF-51 a RF-55, RF-67
@@ -68,5 +70,5 @@ Fuente de datos: híbrido por vista (API real donde existe; mock «Demo» donde 
   - Hecho cuando: `/cuenta/apariencia` está conectada al `ThemeContext`, el botón del topbar alterna claro/oscuro, el reset funciona y el contraste AA se cumple en ambos modos y los 4 acentos; tests de integración y smoke visual en verde.
 - [ ] **T27. Pruebas finales del incremento 4.** RF-60 a RF-64, RF-67
   - Hecho cuando: `npm run test` y `npm run build` en verde; smoke manual de notificaciones y las 4 pestañas de cuenta; `MEMORY.md` actualizado.
-- [ ] **T28. Cierre de HU-20: validación RF por RF, README y memoria.** RF-41 a RF-68
+- [ ] **T28. Cierre de la referencia del frontend: validación RF por RF, README y memoria.** RF-41 a RF-68
   - Hecho cuando: se recorre la spec RF por RF con su test o comprobación manual; `npm run test` y `npm run build` en verde; README documenta instalación, `VITE_API_URL`, arranque del backend, credenciales demo y registro de cliente; `MEMORY.md` resume el estado; no hay RF sin cubrir o se documenta la brecha.

@@ -34,6 +34,9 @@ function stubDashboardFetch(): void {
       if (url.includes('/api/dashboard/sla')) {
         return jsonResponse(buildSlaDashboard())
       }
+      if (url.includes('/api/tickets') || url.includes('/api/technicians')) {
+        return jsonResponse([])
+      }
       return jsonResponse(buildTicketDashboard())
     }),
   )

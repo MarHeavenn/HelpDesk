@@ -222,7 +222,7 @@ def test_detail_shows_priority_null_before_it_is_set():
 def test_list_and_detail_show_current_priority_after_it_is_set(priority):
     requester = _register_client()
     created = _create()
-    _provision_and_login()
+    actor = _provision_and_login()
 
     updated = client.put(
         f"/api/tickets/{created['id']}/priority", json={"priority": priority}
@@ -242,7 +242,7 @@ def test_list_and_detail_show_current_priority_after_it_is_set(priority):
     assert item["title"] == "Titulo"
     assert item["priority"] == priority
     assert item["status"] == OPEN_STATUS
-    assert item["assignee"] is None
+    assert item["assignee"] == {"id": actor.id, "name": actor.name}
     assert item["created_at"] == created["created_at"]
 
     detail_response = client.get(f"/api/tickets/{created['id']}")
@@ -254,7 +254,7 @@ def test_list_and_detail_show_current_priority_after_it_is_set(priority):
     assert detail["description"] == "Descripcion"
     assert detail["priority"] == priority
     assert detail["status"] == OPEN_STATUS
-    assert detail["assignee"] is None
+    assert detail["assignee"] == {"id": actor.id, "name": actor.name}
     assert detail["created_at"] == created["created_at"]
     assert detail["requester_id"] == requester["id"]
 
@@ -262,7 +262,7 @@ def test_list_and_detail_show_current_priority_after_it_is_set(priority):
 def test_list_and_detail_show_the_latest_priority():
     requester = _register_client()
     created = _create()
-    _provision_and_login()
+    actor = _provision_and_login()
 
     first = client.put(
         f"/api/tickets/{created['id']}/priority", json={"priority": "Media"}
@@ -284,7 +284,7 @@ def test_list_summary_keeps_each_ticket_priority():
     requester = _register_client()
     first = _create(title="Primero", description="Descripcion uno")
     second = _create(title="Segundo", description="Descripcion dos")
-    _provision_and_login()
+    actor = _provision_and_login()
 
     assert (
         client.put(
@@ -309,7 +309,7 @@ def test_list_summary_keeps_each_ticket_priority():
     for item in items:
         assert set(item) == SUMMARY_FIELDS
         assert item["status"] == OPEN_STATUS
-        assert item["assignee"] is None
+        assert item["assignee"] == {"id": actor.id, "name": actor.name}
     assert by_id[first["id"]]["priority"] == "Baja"
     assert by_id[first["id"]]["title"] == "Primero"
     assert by_id[second["id"]]["priority"] == "Crítica"

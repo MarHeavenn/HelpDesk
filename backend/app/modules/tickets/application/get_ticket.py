@@ -12,7 +12,7 @@ capa de comunicacion (404).
 """
 
 from app.modules.tickets.domain.entities import (
-    MANAGEMENT_ROLES,
+    TICKET_READ_ROLES,
     Ticket,
     is_valid_uuid_format,
 )
@@ -55,6 +55,7 @@ def get_ticket_detail(
     actor_id: str,
     actor_role: str,
     tickets: InMemoryTicketRepository,
+    actor_company_id: str | None = None,
 ) -> Ticket:
     """Devuelve el ticket visible para el actor (HU-06, RF-51, RF-52).
 
@@ -69,6 +70,11 @@ def get_ticket_detail(
     ticket = tickets.find_by_id(ticket_id)
     if ticket is None:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
-    if actor_role not in MANAGEMENT_ROLES and ticket.requester_id != actor_id:
+    same_tenant = ticket.company_id == actor_company_id
+    if ticket.company_id is None and actor_company_id is None:
+        same_tenant = True
+    if not same_tenant:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    if actor_role not in TICKET_READ_ROLES and ticket.requester_id != actor_id:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     return ticket

@@ -103,6 +103,7 @@ def _to_dashboard_ticket(ticket: SlaTicketView) -> SlaDashboardTicket:
         resolved_target_minutes=ticket.resolved_target_minutes,
         assignee_id=ticket.assignee_id,
         is_resolved=ticket.is_resolved,
+        company_id=ticket.company_id,
     )
 
 
@@ -124,6 +125,7 @@ def get_sla_dashboard_endpoint(
                 _to_dashboard_ticket(ticket) for ticket in list_sla_tickets()
             ],
             days=days,
+            company_id=current.get("company_id"),
         )
     except SlaDashboardAccessDeniedError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

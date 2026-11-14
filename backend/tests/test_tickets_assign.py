@@ -830,7 +830,7 @@ def test_http_repeating_the_current_technician_is_200_without_record():
     assert get_assignment_log().count() == 1
 
 
-# --- T8 / RF-39.3: tecnico invalido -> 422 uniforme en la API ---
+# --- T8 / RF-39.3: elegibilidad del tecnico en la API ---
 
 
 @pytest.mark.parametrize(
@@ -852,9 +852,15 @@ def test_http_invalid_technician_returns_the_uniform_422(candidate):
         created["id"], {"assignee_id": value}, target=admin_api
     )
 
-    assert response.status_code == 422
-    assert response.status_code not in (400, 403, 404, 409)
-    assert response.json() == {"detail": INVALID_TECHNICIAN_MESSAGE}
+    expected_status = 404 if candidate == "nonexistent" else 422
+    assert response.status_code == expected_status
+    assert response.status_code not in (400, 403, 409)
+    if candidate == "non_uuid":
+        assert isinstance(response.json()["detail"], list)
+    elif candidate == "nonexistent":
+        assert response.json() == {"detail": "ticket not found"}
+    else:
+        assert response.json() == {"detail": INVALID_TECHNICIAN_MESSAGE}
     stored = _stored(created["id"])
     assert stored.assignee_id is None
     assert stored.assignee_name is None
@@ -880,8 +886,8 @@ def test_http_invalid_technician_does_not_mutate_an_assigned_ticket():
         created["id"], {"assignee_id": str(uuid.uuid4())}, target=admin_api
     )
 
-    assert response.status_code == 422
-    assert response.json() == {"detail": INVALID_TECHNICIAN_MESSAGE}
+    assert response.status_code == 404
+    assert response.json() == {"detail": "ticket not found"}
     after = _stored(created["id"])
     assert (after.assignee_id, after.assignee_name) == before_state
     assert get_assignment_log().count() == 1

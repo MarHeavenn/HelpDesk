@@ -32,9 +32,18 @@ from app.modules.identity.interface.schemas import (
     MeResponse,
     RegisterRequest,
     UserResponse,
+    AcceptInvitationRequest,
+)
+from app.modules.identity.interface.users_router import _representation
+from app.modules.identity.application.invitations import (
+    InvitationNotFoundError,
+    InvitationValidationError,
+    accept_invitation,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+invitation_router = APIRouter(prefix="/api/invitations", tags=["invitations"])
 
 # Regla SameSite/Secure del despliegue (D4): mismo sitio `Lax` sin
 # `Secure` por defecto; si frontend y backend quedan en dominios
@@ -112,3 +121,14 @@ def logout_endpoint(request: Request, response: Response) -> None:
     )
     response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
     return None
+
+
+@invitation_router.post("/{token}/accept")
+def accept_invitation_endpoint(token: str, payload: AcceptInvitationRequest):
+    try:
+        user = accept_invitation(token, payload.password, get_user_repository())
+    except InvitationNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvitationValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _representation(user)

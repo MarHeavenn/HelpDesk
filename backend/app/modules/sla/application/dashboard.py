@@ -38,8 +38,9 @@ from app.modules.sla.domain.entities import (
 from app.modules.sla.domain.policy_config import SLA_PRIORITIES
 
 ADMIN_ROLE = "administrador"
+SUPERVISOR_ROLE = "supervisor"
 TECHNICIAN_ROLE = "tecnico"
-MANAGEMENT_ROLES = frozenset({ADMIN_ROLE, TECHNICIAN_ROLE})
+MANAGEMENT_ROLES = frozenset({ADMIN_ROLE, SUPERVISOR_ROLE, TECHNICIAN_ROLE})
 DENIED_MESSAGE = "sla not found"
 DEFAULT_PERIOD_DAYS = 30
 PERIOD_DAYS = (7, 30, 90)
@@ -64,6 +65,7 @@ class SlaDashboardTicket:
     resolved_target_minutes: int | None
     assignee_id: str | None
     is_resolved: bool
+    company_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +122,7 @@ def get_sla_dashboard(
     tickets: Sequence[SlaDashboardTicket],
     now: datetime | None = None,
     days: int = DEFAULT_PERIOD_DAYS,
+    company_id: str | None = None,
 ) -> SlaDashboard:
     """Construye el resumen de cumplimiento del alcance y periodo del actor.
 
@@ -143,6 +146,8 @@ def get_sla_dashboard(
 
     for ticket in tickets:
         if not period_start <= ticket.created_at <= generated_at:
+            continue
+        if company_id is not None and ticket.company_id != company_id:
             continue
         if actor_role == TECHNICIAN_ROLE and ticket.assignee_id != actor_id:
             continue

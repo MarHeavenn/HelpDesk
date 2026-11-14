@@ -31,7 +31,14 @@ const TECHNICIAN_ROUTES = [
   '/',
   '/tickets',
   '/mis-tickets',
-  '/tickets/nuevo',
+  '/notificaciones',
+  '/cuenta/perfil',
+] as const
+
+const SUPERVISOR_ROUTES = [
+  '/',
+  '/tickets',
+  '/tecnicos',
   '/notificaciones',
   '/cuenta/perfil',
 ] as const
@@ -51,6 +58,7 @@ describe('matriz de permisos', () => {
   it.each<[Rol, readonly string[]]>([
     ['administrador', ADMIN_ROUTES],
     ['tecnico', TECHNICIAN_ROUTES],
+    ['supervisor', SUPERVISOR_ROUTES],
     ['cliente', CLIENT_ROUTES],
   ])('permite al rol %s solo sus rutas', (role, allowed) => {
     for (const route of APP_ROUTES) {
@@ -59,7 +67,7 @@ describe('matriz de permisos', () => {
   })
 
   it('niega rutas desconocidas a todos los roles', () => {
-    for (const role of ['administrador', 'tecnico', 'cliente'] as const) {
+    for (const role of ['administrador', 'tecnico', 'supervisor', 'cliente'] as const) {
       expect(canView(role, '/ruta-inexistente')).toBe(false)
     }
   })
@@ -67,6 +75,7 @@ describe('matriz de permisos', () => {
   it('elige la primera ruta permitida según el rol', () => {
     expect(firstAllowedRoute('administrador')).toBe('/')
     expect(firstAllowedRoute('tecnico')).toBe('/')
+    expect(firstAllowedRoute('supervisor')).toBe('/')
     expect(firstAllowedRoute('cliente')).toBe('/mis-tickets')
   })
 
@@ -76,6 +85,9 @@ describe('matriz de permisos', () => {
     )
     expect(navItems('tecnico').map((item) => item.to)).toEqual(
       TECHNICIAN_ROUTES,
+    )
+    expect(navItems('supervisor').map((item) => item.to)).toEqual(
+      SUPERVISOR_ROUTES,
     )
     expect(navItems('cliente').map((item) => item.to)).toEqual(CLIENT_ROUTES)
   })
@@ -103,10 +115,12 @@ describe('matriz de permisos', () => {
   it('limita la prioridad y la política de SLA según el rol', () => {
     expect(canSetTicketPriority('administrador')).toBe(true)
     expect(canSetTicketPriority('tecnico')).toBe(true)
+    expect(canSetTicketPriority('supervisor')).toBe(true)
     expect(canSetTicketPriority('cliente')).toBe(false)
 
     expect(canReadSlaPolicies('administrador')).toBe(true)
     expect(canReadSlaPolicies('tecnico')).toBe(false)
+    expect(canReadSlaPolicies('supervisor')).toBe(false)
     expect(canReadSlaPolicies('cliente')).toBe(false)
   })
 
@@ -121,5 +135,17 @@ describe('matriz de permisos', () => {
     expect(canAssignTicket('administrador')).toBe(true)
     expect(canAssignTicket('tecnico')).toBe(false)
     expect(canAssignTicket('cliente')).toBe(false)
+  })
+
+  it('expone los avisos literales de entrega de invitación', async () => {
+    const { invitationDeliveryMessage } = await import('@/lib/invitations')
+
+    expect(invitationDeliveryMessage('failed')).toBe(
+      "La cuenta y la invitación se crearon correctamente, pero hubo un problema al enviar el correo electrónico. Por favor, utiliza la opción de 'Reenviar invitación' desde el panel más tarde.",
+    )
+    expect(invitationDeliveryMessage('not-attempted')).toBe(
+      'No se pudo enviar el correo porque el servicio aún no está configurado',
+    )
+    expect(invitationDeliveryMessage('sent')).toBeNull()
   })
 })

@@ -75,6 +75,8 @@ def assign_ticket(
     technician = resolve_technician(technician_id)
     if technician is None:
         raise TicketValidationError(INVALID_TECHNICIAN_MESSAGE)
+    if not getattr(technician, "eligible", True):
+        raise TicketValidationError(INVALID_TECHNICIAN_MESSAGE)
 
     if ticket.assignee_id == technician.id:
         return ticket

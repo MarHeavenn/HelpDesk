@@ -10,6 +10,7 @@ import AppRoutes from '@/routes'
 import {
   ADMIN,
   CLIENTE,
+  SUPERVISOR,
   TECNICO,
   createAuthApi,
 } from '../helpers/renderApp'
@@ -31,6 +32,9 @@ function stubDashboardFetch(): void {
     'fetch',
     vi.fn(async (input: unknown) => {
       const url = String(input)
+      if (url.includes('/api/technicians')) {
+        return jsonResponse([])
+      }
       if (url.includes('/api/dashboard/sla')) {
         return jsonResponse(buildSlaDashboard())
       }
@@ -126,6 +130,37 @@ describe('rutas y guards', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No tienes permiso para acceder a esta sección',
     )
+  })
+
+  it('permite al supervisor acceder al directorio existente', async () => {
+    renderRoute('/tecnicos', SUPERVISOR)
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Técnicos' }),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('Aún no hay técnicos')).toBeInTheDocument()
+  })
+
+  it.each(['/mis-tickets', '/tickets/nuevo', '/sla', '/usuarios', '/empresas'])(
+    'redirige al supervisor fuera de la ruta permitida %s',
+    async (route) => {
+      renderRoute(route, SUPERVISOR)
+
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+      ).toBeInTheDocument()
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'No tienes permiso para acceder a esta sección',
+      )
+    },
+  )
+
+  it('no permite al técnico acceder al alta de tickets', async () => {
+    renderRoute('/tickets/nuevo', TECNICO)
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+    ).toBeInTheDocument()
   })
 
   it('redirige al cliente de / a /mis-tickets', async () => {

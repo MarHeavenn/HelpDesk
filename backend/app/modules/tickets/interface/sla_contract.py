@@ -36,6 +36,7 @@ class SlaTicketView:
     resolved_at: datetime | None
     resolved_target_minutes: int | None
     assignee_id: str | None
+    company_id: str | None = None
 
 
 def list_sla_tickets(
@@ -57,6 +58,7 @@ def list_sla_tickets(
             resolved_at=ticket.resolved_at,
             resolved_target_minutes=ticket.resolved_target_minutes,
             assignee_id=ticket.assignee_id,
+            company_id=ticket.company_id,
         )
         for ticket in repository.list_all()
     ]

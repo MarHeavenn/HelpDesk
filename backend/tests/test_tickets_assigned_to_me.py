@@ -484,7 +484,8 @@ def test_assigned_tickets_do_not_change_the_hu02_list_and_detail_is_visible():
     technician = _provision("tecnico", "Tecnico Uno", "tec@ejemplo.com")
     requester = _provision("administrador", "Admin Uno", "admin@ejemplo.com")
     technician_client = _login(technician["email"])
-    own = technician_client.post(
+    requester_client = _login(requester["email"])
+    own = requester_client.post(
         "/api/tickets",
         json={"title": "Propio", "description": "Creado por el tecnico"},
     )
@@ -500,8 +501,11 @@ def test_assigned_tickets_do_not_change_the_hu02_list_and_detail_is_visible():
     detail = technician_client.get(f"/api/tickets/{assigned.id}")
 
     assert listed.status_code == 200
-    # El listado propio sigue mostrando solo los tickets creados.
-    assert _ids(listed.json()) == [own.json()["id"]]
+    # HU-13: un tecnico ve todos los tickets de su empresa.
+    assert {item["id"] for item in listed.json()} == {
+        own.json()["id"],
+        assigned.id,
+    }
     # HU-06: un tecnico si ve el detalle de un ticket existente.
     assert detail.status_code == 200
     assert detail.json()["id"] == assigned.id

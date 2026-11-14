@@ -6,6 +6,8 @@ exige presencia y tipo, y se rechazan campos extra. La respuesta nunca
 incluye contrasena ni hash.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -55,3 +57,51 @@ class TechnicianResponse(BaseModel):
 
     id: str
     name: str
+
+
+class UserRepresentation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    email: str
+    phone: str | None
+    company_id: str | None
+    role: Literal["cliente", "tecnico", "supervisor", "administrador"]
+    status: Literal["active", "deactivated"]
+    invitation_status: Literal["pending", "accepted"]
+
+
+class CreateUserRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    email: str
+    role: str
+    phone: str | None = None
+
+
+class UpdateUserRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+
+
+class UpdateRoleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["cliente", "tecnico", "supervisor", "administrador"]
+
+
+class UpdateStatusRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["active", "deactivated"]
+
+
+class AcceptInvitationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    password: str

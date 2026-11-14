@@ -507,6 +507,7 @@ def test_invalid_session_token_returns_401_before_invalid_identifier_and_body(
     created = _create_ticket()
     token = api.cookies.get(SESSION_COOKIE_NAME)
     assert token
+    api.cookies.clear()
     api.cookies.set(SESSION_COOKIE_NAME, "token-invalido")
     before = _ticket_state(created["id"])
 

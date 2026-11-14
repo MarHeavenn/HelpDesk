@@ -28,6 +28,7 @@ def create_ticket(
     description: str,
     requester_id: str,
     tickets: InMemoryTicketRepository,
+    company_id: str | None = None,
     now: datetime | None = None,
 ) -> Ticket:
     """Crea un ticket del solicitante autenticado.
@@ -52,6 +53,7 @@ def create_ticket(
         requester_id=requester_id,
         created_at=now or datetime.now(timezone.utc),
         status=OPEN_STATUS,
+        company_id=company_id,
     )
     tickets.add(ticket)
     return ticket

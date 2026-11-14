@@ -86,6 +86,7 @@ def list_ticket_history_endpoint(
             actor_id=current["id"],
             actor_role=current["role"],
             tickets=get_ticket_repository(),
+            actor_company_id=current.get("company_id"),
             modifications=get_ticket_modification_log(),
             assignments=get_assignment_log(),
             comments=get_ticket_comment_repository(),

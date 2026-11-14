@@ -22,7 +22,7 @@ from app.modules.tickets.application.get_ticket import (
 )
 from app.modules.tickets.domain.entities import (
     CLOSED_STATUS,
-    MANAGEMENT_ROLES,
+    TICKET_MODIFICATION_ROLES,
     Ticket,
     is_valid_uuid_format,
 )
@@ -43,6 +43,8 @@ def get_modifiable_ticket(
     ticket_id: str,
     actor_role: str,
     tickets: InMemoryTicketRepository,
+    actor_company_id: str | None = None,
+    actor_id: str | None = None,
 ) -> Ticket:
     """Devuelve el ticket sobre el que el actor puede operar.
 
@@ -52,12 +54,24 @@ def get_modifiable_ticket(
     (RF-24, RF-25). Lanza `TicketClosedError` si el ticket esta `Cerrado`
     (RF-28), comprobacion previa a cualquier validacion de la entrada.
     """
-    if not isinstance(actor_role, str) or actor_role not in MANAGEMENT_ROLES:
+    if not isinstance(actor_role, str) or actor_role not in TICKET_MODIFICATION_ROLES:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     if not is_valid_uuid_format(ticket_id):
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     ticket = tickets.find_by_id(ticket_id)
     if ticket is None:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    same_tenant = ticket.company_id == actor_company_id
+    if ticket.company_id is None and actor_company_id is None:
+        same_tenant = True
+    if not same_tenant:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    if (
+        ticket.company_id is not None
+        and actor_role == "tecnico"
+        and actor_id is not None
+        and ticket.assignee_id != actor_id
+    ):
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     if ticket.status == CLOSED_STATUS:
         raise TicketClosedError(TICKET_CLOSED_MESSAGE)

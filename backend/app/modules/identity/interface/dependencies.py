@@ -33,4 +33,9 @@ def get_current_user(request: Request) -> dict[str, str]:
         )
     except InvalidSessionError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
-    return {"id": user.id, "email": user.email, "role": user.role}
+    return {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "company_id": user.company_id,
+    }

@@ -124,10 +124,10 @@ def get_tickets_dashboard_endpoint(
     recibe 404 uniforme sin datos del dashboard.
     """
     technicians: list[TechnicianRef] = []
-    if current["role"] == ADMIN_ROLE:
+    if current["role"] in {"administrador", "supervisor"}:
         technicians = [
             TechnicianRef(id=item.id, name=item.name)
-            for item in get_technician_directory()
+            for item in get_technician_directory(current.get("company_id"))
         ]
     else:
         own = get_technician_summary(current["id"])
@@ -144,6 +144,7 @@ def get_tickets_dashboard_endpoint(
             actor_role=current["role"],
             tickets=get_ticket_repository(),
             technicians=technicians,
+            company_id=current.get("company_id"),
         )
     except DashboardAccessDeniedError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

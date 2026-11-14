@@ -23,7 +23,7 @@ from app.modules.tickets.application.get_ticket import (
 )
 from app.modules.tickets.domain.entities import (
     CLOSED_STATUS,
-    MANAGEMENT_ROLES,
+    TICKET_MODIFICATION_ROLES,
     Ticket,
 )
 from app.modules.tickets.infrastructure.ticket_repository import (
@@ -36,6 +36,7 @@ def get_commentable_ticket(
     actor_id: str,
     actor_role: str,
     tickets: InMemoryTicketRepository,
+    actor_company_id: str | None = None,
 ) -> Ticket:
     """Devuelve el ticket sobre el que el actor puede registrar un comentario.
 
@@ -50,8 +51,11 @@ def get_commentable_ticket(
         actor_id=actor_id,
         actor_role=actor_role,
         tickets=tickets,
+        actor_company_id=actor_company_id,
     )
-    if not isinstance(actor_role, str) or actor_role not in MANAGEMENT_ROLES:
+    if not isinstance(actor_role, str) or actor_role not in TICKET_MODIFICATION_ROLES:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    if actor_role == "tecnico" and ticket.assignee_id != actor_id:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     if ticket.status == CLOSED_STATUS:
         raise TicketClosedError(TICKET_CLOSED_MESSAGE)

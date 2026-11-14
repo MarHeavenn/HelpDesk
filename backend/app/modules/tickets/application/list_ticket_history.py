@@ -61,6 +61,7 @@ def list_ticket_history(
     modifications: InMemoryTicketModificationLog,
     assignments: InMemoryAssignmentLog,
     comments: InMemoryTicketCommentRepository,
+    actor_company_id: str | None = None,
 ) -> list[TicketHistoryEvent]:
     """Devuelve el historial visible del ticket, del mas antiguo al mas nuevo.
 
@@ -73,6 +74,7 @@ def list_ticket_history(
         actor_id=actor_id,
         actor_role=actor_role,
         tickets=tickets,
+        actor_company_id=actor_company_id,
     )
 
     # (fecha, rango de fuente, indice de alta, evento)

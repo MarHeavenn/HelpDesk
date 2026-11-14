@@ -9,6 +9,7 @@ modificacion admiten unicamente el valor a fijar (RF-29.2).
 """
 
 from pydantic import BaseModel, ConfigDict, StrictStr
+from uuid import UUID
 
 
 class CreateTicketRequest(BaseModel):
@@ -45,7 +46,7 @@ class SetAssigneeRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    assignee_id: StrictStr
+    assignee_id: UUID
 
 
 class CreateCommentRequest(BaseModel):

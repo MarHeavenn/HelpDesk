@@ -101,10 +101,12 @@ HISTORY_ACTION_COMMENT = "comment_added"
 
 # Roles con permisos de gestion sobre prioridad y estado (RF-24).
 MANAGEMENT_ROLES = frozenset({"tecnico", "administrador"})
+TICKET_READ_ROLES = frozenset({"tecnico", "supervisor", "administrador"})
+TICKET_MODIFICATION_ROLES = frozenset({"tecnico", "supervisor", "administrador"})
 
 # Roles con permiso de asignacion y reasignacion (RF-38): solo el
 # administrador; los tecnicos no asignan.
-ASSIGNMENT_ROLES = frozenset({"administrador"})
+ASSIGNMENT_ROLES = frozenset({"administrador", "supervisor"})
 
 # Roles con permiso de reapertura (HU-08, RF-77): solo el administrador.
 REOPEN_ROLES = frozenset({"administrador"})
@@ -242,6 +244,9 @@ class Ticket:
     # Objetivo de SLA aplicado al resolver (HU-14, RF-76). Vacio mientras
     # el ticket este activo y se limpia al reabrir.
     resolved_target_minutes: int | None = None
+    # Tenant autoritativo del ticket (HU-13). El valor por defecto conserva
+    # compatibilidad con tickets legacy no multitenant de las historias previas.
+    company_id: str | None = None
 
 
 @dataclass

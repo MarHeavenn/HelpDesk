@@ -65,8 +65,18 @@ class User:
     id: str
     name: str
     email: str
-    password_hash: str
+    password_hash: Optional[str]
     role: str
+    company_id: Optional[str] = None
+    phone: Optional[str] = None
+    status: str = "active"
+    invitation_status: str = "accepted"
+    invitation_token_hash: Optional[str] = None
+    invitation_expires_at: Optional[datetime] = None
+    invitation_used_at: Optional[datetime] = None
+    # The clear token exists only in the process while an invitation is sent;
+    # it is never part of an HTTP representation or persisted credential.
+    invitation_token: Optional[str] = None
 
 
 @dataclass

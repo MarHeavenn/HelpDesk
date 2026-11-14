@@ -46,6 +46,15 @@ class InMemorySessionStore:
         session.revoked_at = now
         return True
 
+    def revoke_by_user(self, user_id: str, now: datetime) -> int:
+        """Revoca todas las sesiones activas de una cuenta."""
+        count = 0
+        for session in self._by_token_hash.values():
+            if session.user_id == user_id and session.revoked_at is None:
+                session.revoked_at = now
+                count += 1
+        return count
+
     def count(self) -> int:
         """Numero de sesiones almacenadas."""
         return len(self._by_token_hash)

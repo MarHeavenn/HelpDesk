@@ -434,7 +434,10 @@ def test_put_status_by_management_role_returns_full_updated_ticket(role):
     assert body["description"] == "Descripcion"
     assert body["priority"] is None
     assert body["status"] == "En progreso"
-    assert body["assignee"] is None
+    if role == "tecnico":
+        assert body["assignee"] == {"id": actor.id, "name": actor.name}
+    else:
+        assert body["assignee"] is None
     assert body["created_at"] == created["created_at"]
     assert body["requester_id"] == requester["id"]
     assert "previous_value" not in response.text

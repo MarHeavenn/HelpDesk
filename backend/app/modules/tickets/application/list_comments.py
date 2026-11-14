@@ -22,6 +22,7 @@ def list_comments(
     actor_role: str,
     tickets: InMemoryTicketRepository,
     comments: InMemoryTicketCommentRepository,
+    actor_company_id: str | None = None,
 ) -> list[TicketComment]:
     """Devuelve el seguimiento visible del ticket, del mas antiguo al mas nuevo.
 
@@ -34,5 +35,6 @@ def list_comments(
         actor_id=actor_id,
         actor_role=actor_role,
         tickets=tickets,
+        actor_company_id=actor_company_id,
     )
     return comments.list_by_ticket(ticket_id)

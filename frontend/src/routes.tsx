@@ -2,7 +2,7 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router
 
 import { useAuth } from '@/context/AuthContext'
 import AppShell from '@/layout/AppShell'
-import { firstAllowedRoute } from '@/lib/permissions'
+import { APP_ROUTES, canView, firstAllowedRoute } from '@/lib/permissions'
 import { strings } from '@/lib/strings'
 import CreateTicketPage from '@/pages/CreateTicketPage'
 import DashboardPage from '@/pages/DashboardPage'
@@ -12,10 +12,11 @@ import MyTicketsPage from '@/pages/MyTicketsPage'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 import ProfilePage from '@/pages/ProfilePage'
 import TicketsPage from '@/pages/TicketsPage'
+import TechniciansPage from '@/pages/TechniciansPage'
 import type { Rol } from '@/types/domain'
 
-const ADMIN_ROLES: readonly Rol[] = ['administrador']
-const STAFF_ROLES: readonly Rol[] = ['administrador', 'tecnico']
+const STAFF_ROLES: readonly Rol[] = ['administrador', 'supervisor', 'tecnico']
+const CREATE_TICKET_ROLES: readonly Rol[] = ['administrador', 'cliente']
 
 function SessionLoading() {
   return (
@@ -84,6 +85,30 @@ export function RequireRole({ allow }: { allow: readonly Rol[] }) {
   return <Outlet />
 }
 
+/** Aplica la matriz de navegación también a las rutas existentes no agrupadas. */
+export function RequireRoutePermission() {
+  const { user } = useAuth()
+  const location = useLocation()
+
+  if (!user) return <Navigate to="/login" replace />
+
+  const isKnownRoute = APP_ROUTES.some(
+    (route) =>
+      route === location.pathname ||
+      (route !== '/' && location.pathname.startsWith(`${route}/`)),
+  )
+  if (isKnownRoute && !canView(user.role, location.pathname)) {
+    return (
+      <Navigate
+        to={firstAllowedRoute(user.role)}
+        replace
+        state={{ denied: true }}
+      />
+    )
+  }
+  return <Outlet />
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -91,20 +116,22 @@ export default function AppRoutes() {
 
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
-          <Route element={<RequireRole allow={STAFF_ROLES} />}>
+          <Route element={<RequireRoutePermission />}>
+            <Route element={<RequireRole allow={STAFF_ROLES} />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/tickets" element={<TicketsPage />} />
           </Route>
 
           <Route path="/mis-tickets" element={<MyTicketsPage />} />
-          <Route path="/tickets/nuevo" element={<CreateTicketPage />} />
 
-          <Route element={<RequireRole allow={ADMIN_ROLES} />}>
+            <Route element={<RequireRole allow={CREATE_TICKET_ROLES} />}>
+              <Route path="/tickets/nuevo" element={<CreateTicketPage />} />
+            </Route>
+
+            <Route element={<RequireRole allow={['administrador', 'supervisor']} />}>
             <Route
               path="/tecnicos"
-              element={
-                <PlaceholderPage title={strings.routes.titles['/tecnicos']} />
-              }
+              element={<TechniciansPage />}
             />
             <Route
               path="/sla"
@@ -122,19 +149,20 @@ export default function AppRoutes() {
                 <PlaceholderPage title={strings.routes.titles['/empresas']} />
               }
             />
-          </Route>
+            </Route>
 
-          <Route
-            path="/notificaciones"
-            element={
-              <PlaceholderPage
-                title={strings.routes.titles['/notificaciones']}
-              />
-            }
-          />
-          <Route path="/cuenta" element={<Navigate to="/cuenta/perfil" replace />} />
-          <Route path="/cuenta/perfil" element={<ProfilePage />} />
-          <Route path="*" element={<NotFoundPage />} />
+            <Route
+              path="/notificaciones"
+              element={
+                <PlaceholderPage
+                  title={strings.routes.titles['/notificaciones']}
+                />
+              }
+            />
+            <Route path="/cuenta" element={<Navigate to="/cuenta/perfil" replace />} />
+            <Route path="/cuenta/perfil" element={<ProfilePage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
         </Route>
       </Route>
     </Routes>

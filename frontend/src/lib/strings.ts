@@ -130,6 +130,14 @@ export const strings = {
       loading: 'Cargando cumplimiento de SLA',
     },
   },
+  technicians: {
+    title: 'Técnicos',
+    emptyTitle: 'Aún no hay técnicos',
+    emptyBody: 'Todavía no hay técnicos activos en tu empresa.',
+    errorTitle: 'No se pudo cargar el directorio',
+    errorBody: 'Revisa tu conexión e inténtalo de nuevo.',
+    loading: 'Cargando técnicos',
+  },
   auth: {
     title: 'Iniciar sesión',
     subtitle: 'Accede a tu espacio de soporte',
@@ -286,6 +294,7 @@ export const strings = {
   },
   roles: {
     administrador: 'Administrador',
+    supervisor: 'Supervisor',
     tecnico: 'Técnico',
     cliente: 'Cliente',
   },

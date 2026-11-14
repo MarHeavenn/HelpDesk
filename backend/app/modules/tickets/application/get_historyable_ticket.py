@@ -18,7 +18,7 @@ from app.modules.tickets.application.get_ticket import (
     TicketNotFoundError,
     get_ticket_detail,
 )
-from app.modules.tickets.domain.entities import MANAGEMENT_ROLES, Ticket
+from app.modules.tickets.domain.entities import TICKET_READ_ROLES, Ticket
 from app.modules.tickets.infrastructure.ticket_repository import (
     InMemoryTicketRepository,
 )
@@ -29,6 +29,7 @@ def get_historyable_ticket(
     actor_id: str,
     actor_role: str,
     tickets: InMemoryTicketRepository,
+    actor_company_id: str | None = None,
 ) -> Ticket:
     """Devuelve el ticket cuyo historial puede consultar el actor.
 
@@ -37,11 +38,12 @@ def get_historyable_ticket(
     existe o si el cliente no puede verlo. Un ticket `Cerrado` se devuelve
     sin error: la lectura no modifica nada.
     """
-    if not isinstance(actor_role, str) or actor_role not in MANAGEMENT_ROLES:
+    if not isinstance(actor_role, str) or actor_role not in TICKET_READ_ROLES:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     return get_ticket_detail(
         ticket_id=ticket_id,
         actor_id=actor_id,
         actor_role=actor_role,
         tickets=tickets,
+        actor_company_id=actor_company_id,
     )

@@ -20,7 +20,14 @@ const TECHNICIAN_ROUTES: readonly AppRoute[] = [
   '/',
   '/tickets',
   '/mis-tickets',
-  '/tickets/nuevo',
+  '/notificaciones',
+  '/cuenta/perfil',
+]
+
+const SUPERVISOR_ROUTES: readonly AppRoute[] = [
+  '/',
+  '/tickets',
+  '/tecnicos',
   '/notificaciones',
   '/cuenta/perfil',
 ]
@@ -34,13 +41,19 @@ const CLIENT_ROUTES: readonly AppRoute[] = [
 
 const PERMISSIONS: Record<Rol, readonly AppRoute[]> = {
   administrador: APP_ROUTES,
+  supervisor: SUPERVISOR_ROUTES,
   tecnico: TECHNICIAN_ROUTES,
   cliente: CLIENT_ROUTES,
 }
 
 /** Indica si el rol puede ver la ruta indicada. */
 export function canView(role: Rol, path: string): boolean {
-  return PERMISSIONS[role].some((route) => route === path)
+  if ((APP_ROUTES as readonly string[]).includes(path)) {
+    return PERMISSIONS[role].includes(path as AppRoute)
+  }
+  return PERMISSIONS[role].some(
+    (route) => route === path || (route !== '/' && path.startsWith(`${route}/`)),
+  )
 }
 
 /** Primera ruta permitida para el rol, usada en guards y redirecciones. */
@@ -53,7 +66,7 @@ export function firstAllowedRoute(role: Rol): AppRoute {
  * (HU-03); el cliente la elige como intención, pero el backend no se la acepta.
  */
 export function canSetTicketPriority(role: Rol): boolean {
-  return role === 'administrador' || role === 'tecnico'
+  return role === 'administrador' || role === 'supervisor' || role === 'tecnico'
 }
 
 /** La política de SLA vigente solo es legible por el administrador (HU-14). */

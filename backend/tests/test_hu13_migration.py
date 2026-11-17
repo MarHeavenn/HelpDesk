@@ -38,9 +38,11 @@ def test_hu13_migration_is_after_001_and_allows_nullable_company(conn):
     versions = [row["version"] for row in conn.execute(
         "SELECT version FROM schema_migrations ORDER BY version"
     ).fetchall()]
-    assert versions[:1] == ["001_init.sql"]
-    assert "002_identity_accounts.sql" in versions
-    assert versions[-1] == "003_identity_invitation_state.sql"
+    assert versions[:3] == [
+        "001_init.sql",
+        "002_identity_accounts.sql",
+        "003_identity_invitation_state.sql",
+    ]
 
     company_nullable = conn.execute(
         """SELECT is_nullable FROM information_schema.columns

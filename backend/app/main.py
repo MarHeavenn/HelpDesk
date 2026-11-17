@@ -5,6 +5,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.modules.companies.interface.router import router as companies_router
 from app.modules.identity.interface.router import router as auth_router, invitation_router
 from app.modules.identity.interface.technicians_router import (
     router as technicians_router,
@@ -78,6 +79,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(invitation_router)
+app.include_router(companies_router)
 app.include_router(technicians_router)
 app.include_router(users_router)
 app.include_router(tickets_router)

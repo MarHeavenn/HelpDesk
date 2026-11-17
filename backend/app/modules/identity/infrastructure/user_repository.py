@@ -21,6 +21,17 @@ class EmailAlreadyStoredError(ValueError):
     """El email (normalizado) ya existe en la persistencia."""
 
 
+def _is_unique_violation(exc: BaseException) -> bool:
+    """Detecta una violacion de restriccion unica de PostgreSQL (R2)."""
+    sqlstate = getattr(exc, "sqlstate", None)
+    if sqlstate == "23505":
+        return True
+    if "UniqueViolation" in type(exc).__name__:
+        return True
+    message = str(exc).lower()
+    return "unique" in message and "violat" in message
+
+
 class LastActiveAdministratorPersistenceError(ValueError):
     """La persistencia compartida impediria retirar el ultimo administrador."""
 
@@ -49,9 +60,13 @@ class InMemoryUserRepository:
         self._by_email: dict[str, User] = {}
         self.lock = RLock()
 
-    def add(self, user: User) -> None:
+    def add(self, user: User, conn=None) -> None:
         """Guarda el usuario; lanza EmailAlreadyStoredError si el email
-        normalizado ya existe."""
+        normalizado ya existe.
+
+        `conn` permite que el alta participe en la transaccion del llamador
+        (HU-19 RF-135: empresa y administrador inicial en una sola operacion).
+        """
         key = normalize_email(user.email)
         with self.lock:
             if key in self._by_email:
@@ -59,11 +74,22 @@ class InMemoryUserRepository:
             self._by_id[user.id] = user
             self._by_email[key] = user
             try:
-                self.sync_persistent(user)
+                self.sync_persistent(user, conn)
             except RuntimeError:
                 if postgres_configured() or not in_memory_fallback_enabled():
                     raise
-            if user.company_id is not None and user.role == "administrador" and user.status == "active":
+            except EmailAlreadyStoredError:
+                # La restriccion unica de la base de datos (R2) rechaza el
+                # correo; se compensa la vista en memoria del proceso.
+                self._by_id.pop(user.id, None)
+                self._by_email.pop(key, None)
+                raise
+            if (
+                conn is None
+                and user.company_id is not None
+                and user.role == "administrador"
+                and user.status == "active"
+            ):
                 if postgres_configured():
                     self._register_active_admin_if_guarded(user)
                 elif in_memory_fallback_enabled():
@@ -80,6 +106,20 @@ class InMemoryUserRepository:
             user.email = key
             self._by_email[key] = user
 
+    def remove(self, user_id: str) -> None:
+        """Retira una cuenta del repositorio del proceso.
+
+        Se usa para compensar un alta fallida (RO-01): si la persistencia
+        rechaza la cuenta, no debe quedar una cuenta parcial en la vista en
+        memoria. No elimina cuentas ya persistidas: el rollback de la
+        transacción de PostgreSQL deshace su propia inserción.
+        """
+        with self.lock:
+            removed = self._by_id.pop(user_id, None)
+            if removed is None:
+                return
+            self._by_email.pop(normalize_email(removed.email), None)
+
     def find_by_email(self, email: str) -> User | None:
         """Busca por email (se normaliza de forma defensiva); None si no existe."""
         try:
@@ -87,6 +127,39 @@ class InMemoryUserRepository:
         except (ValueError, AttributeError):
             return None
         return self._by_email.get(key)
+
+    def find_by_email_persistent(self, email: str) -> User | None:
+        """Cuenta con ese correo en el almacén compartido (RO-01).
+
+        Es la vía por la que una operación externa al proceso de la API —la
+        semilla del administrador de plataforma— detecta una cuenta creada
+        antes por otra ejecución. Con PostgreSQL consulta el almacén
+        compartido; sin PostgreSQL exige el seam explícito en memoria y
+        consulta el repositorio del proceso: no hay fallback silencioso.
+        """
+        try:
+            key = normalize_email(email)
+        except (ValueError, AttributeError):
+            return None
+        if postgres_configured():
+            with connection() as conn:
+                row = conn.execute(
+                    """SELECT account_id, company_id, name, email, phone, role,
+                              status, invitation_status, password_hash,
+                              invitation_token_hash, invitation_expires_at,
+                              invitation_used_at, created_at
+                       FROM identity_invitation_accounts
+                       WHERE lower(email) = %s
+                       ORDER BY created_at, account_id
+                       LIMIT 1""",
+                    (key,),
+                ).fetchone()
+            return self._user_from_row(row) if row else None
+        if not in_memory_fallback_enabled():
+            raise RuntimeError(
+                "Configura DATABASE_URL o POSTGRES_PASSWORD para consultar usuarios"
+            )
+        return self.find_by_email(key)
 
     def find_by_id(self, user_id: str) -> User | None:
         """Busca por id; None si no existe."""
@@ -132,8 +205,8 @@ class InMemoryUserRepository:
             INSERT INTO identity_invitation_accounts (
                 account_id, company_id, name, email, phone, role, status,
                 invitation_status, password_hash, invitation_token_hash,
-                invitation_expires_at, invitation_used_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                invitation_expires_at, invitation_used_at, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (account_id) DO UPDATE SET
                 company_id = EXCLUDED.company_id, name = EXCLUDED.name,
                 email = EXCLUDED.email, phone = EXCLUDED.phone,
@@ -142,7 +215,8 @@ class InMemoryUserRepository:
                 password_hash = EXCLUDED.password_hash,
                 invitation_token_hash = EXCLUDED.invitation_token_hash,
                 invitation_expires_at = EXCLUDED.invitation_expires_at,
-                invitation_used_at = EXCLUDED.invitation_used_at
+                invitation_used_at = EXCLUDED.invitation_used_at,
+                created_at = EXCLUDED.created_at
         """
 
     def sync_persistent(self, user: User, conn=None) -> None:
@@ -157,15 +231,21 @@ class InMemoryUserRepository:
             with connection() as owned:
                 self.sync_persistent(user, owned)
             return
-        conn.execute(
-            self._upsert_sql(),
-            (
-                user.id, user.company_id, user.name, user.email, user.phone,
-                user.role, user.status, user.invitation_status,
-                user.password_hash, user.invitation_token_hash,
-                user.invitation_expires_at, user.invitation_used_at,
-            ),
-        )
+        try:
+            conn.execute(
+                self._upsert_sql(),
+                (
+                    user.id, user.company_id, user.name, user.email, user.phone,
+                    user.role, user.status, user.invitation_status,
+                    user.password_hash, user.invitation_token_hash,
+                    user.invitation_expires_at, user.invitation_used_at,
+                    user.created_at,
+                ),
+            )
+        except Exception as exc:
+            if _is_unique_violation(exc):
+                raise EmailAlreadyStoredError("email already registered") from exc
+            raise
 
     @staticmethod
     def _user_from_row(row) -> User:
@@ -178,13 +258,14 @@ class InMemoryUserRepository:
             invitation_token_hash=row["invitation_token_hash"],
             invitation_expires_at=row["invitation_expires_at"],
             invitation_used_at=row["invitation_used_at"],
+            created_at=row["created_at"],
         )
 
     def load_persistent_for_update(self, account_id: str, conn):
         row = conn.execute(
             """SELECT account_id, company_id, name, email, phone, role, status,
                       invitation_status, password_hash, invitation_token_hash,
-                      invitation_expires_at, invitation_used_at
+                      invitation_expires_at, invitation_used_at, created_at
                FROM identity_invitation_accounts
                WHERE account_id = %s
                FOR UPDATE""",

@@ -10,6 +10,9 @@ from email.message import EmailMessage
 from typing import Iterator
 
 from app.infrastructure.db import connection
+from app.modules.companies.interface.company_status_contract import (
+    get_company_status,
+)
 from app.modules.identity.domain.entities import User, validate_password
 from app.modules.identity.infrastructure.password_hasher import Argon2PasswordHasher
 from app.modules.identity.infrastructure.user_repository import InMemoryUserRepository
@@ -174,6 +177,14 @@ def accept_invitation(
             or user.invitation_expires_at is None
             or now >= user.invitation_expires_at
         ):
+            raise InvitationNotFoundError("invitation not found")
+        # RF-136: la aceptación de una invitación de una empresa inactiva
+        # responde el mismo 404 uniforme que un token inválido, sin consumir
+        # el token ni establecer contraseña, y antes de validar la contraseña
+        # (RF-137). RF-139: solo bloquea el estado exactamente `inactive`; un
+        # estado `None` (empresa heredada sin fila en `companies`, como
+        # `company_id="c1"` en fixtures de HU-13) NO bloquea.
+        if get_company_status(user.company_id) == "inactive":
             raise InvitationNotFoundError("invitation not found")
         # Keep the repository's aggregate instance coherent for callers that
         # retain it (the durable row remains the source of truth).

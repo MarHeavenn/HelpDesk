@@ -29,6 +29,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ValidationError
 
 from app.modules.identity.interface.dependencies import get_current_user
+from app.modules.tickets.interface.dependencies import creatable_actor
 from app.modules.identity.interface.technicians_contract import (
     get_technician_assignment_candidate,
     get_technician_summary,
@@ -383,15 +384,6 @@ _assignee_body = _json_body(SetAssigneeRequest)
 _create_body = _json_body(CreateTicketRequest)
 
 
-def _creatable_actor(current: dict = Depends(get_current_user)) -> dict:
-    """Autoriza el alta antes de leer/validar el cuerpo de la petición."""
-    if current.get("role") not in {"administrador", "cliente"}:
-        raise HTTPException(status_code=404, detail="ticket not found")
-    if current.get("company_id") is None:
-        raise HTTPException(status_code=404, detail="ticket not found")
-    return current
-
-
 def _json_body_documentation(schema: type[BaseModel]) -> dict[str, Any]:
     """Documenta en OpenAPI el cuerpo que se valida en una dependencia."""
     return {
@@ -406,7 +398,7 @@ def _json_body_documentation(schema: type[BaseModel]) -> dict[str, Any]:
 
 @router.post("", response_model=TicketResponse, status_code=201)
 def create_ticket_endpoint(
-    current: dict = Depends(_creatable_actor),
+    current: dict = Depends(creatable_actor),
     payload: CreateTicketRequest = Depends(_create_body),
 ) -> TicketResponse:
     """Crea un ticket del usuario autenticado (201) o rechaza con 422."""

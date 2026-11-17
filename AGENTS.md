@@ -9,7 +9,7 @@ Sistema Help Desk SaaS para registrar, asignar y dar seguimiento a tickets de so
 - Frontend: React con TypeScript en `frontend/` (`src/`, `public/`, `tests/`).
 - Backend: FastAPI con Python en `backend/` (`app/`, `migrations/`, `tests/`).
 - Base de datos: PostgreSQL (ver `infra/docker-compose.yml`).
-- Arquitectura: monolito modular. Módulos en `backend/app/modules/`: `identity`, `tickets`, `assignment`, `sla`.
+- Arquitectura: monolito modular. Módulos en `backend/app/modules/`: `identity`, `tickets`, `assignment`, `sla`, `companies`.
 - Documentación: `docs/constitution.md`, `README.md`, `MEMORY.md`.
 - Especificaciones: `specs/project.md` y `specs/features/<HU>/` (`spec.md`, `plan.md`, `tasks.md`).
 
@@ -34,6 +34,8 @@ Reglas:
 - El frontend no debe acceder directamente a PostgreSQL.
 - Un módulo no debe acceder directamente a las tablas internas de otro módulo.
 - Las reglas de negocio no deben implementarse en los controladores HTTP.
+- `companies` es dueño del catálogo de empresas y de sus datos de contacto y estado; `identity` sigue siendo dueño de las cuentas y las invitaciones, y `tickets` de los tickets.
+- La relación entre `companies`, `identity` y `tickets` pasa solo por los contratos `interface/*_contract.py` (nada de tablas ajenas); un contrato no importa el contrato de otro módulo y la composición ocurre en `interface/router.py` y `main.py`.
 
 ## Forma de trabajar
 

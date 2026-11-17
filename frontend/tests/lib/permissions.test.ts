@@ -106,6 +106,17 @@ describe('matriz de permisos', () => {
     )
   })
 
+  it('muestra la entrada de Empresas solo al administrador (RF-138)', () => {
+    expect(navItems('administrador').map((item) => item.to)).toContain(
+      '/empresas',
+    )
+
+    for (const role of ['supervisor', 'tecnico', 'cliente'] as Rol[]) {
+      expect(navItems(role).map((item) => item.to)).not.toContain('/empresas')
+      expect(canView(role, '/empresas')).toBe(false)
+    }
+  })
+
   it('resuelve el título de una ruta conocida y el de una desconocida', () => {
     expect(routeTitle('/tickets')).toBe('Todos los tickets')
     expect(routeTitle('/cuenta/perfil')).toBe('Mi perfil')

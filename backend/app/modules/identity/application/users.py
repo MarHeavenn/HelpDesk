@@ -3,6 +3,9 @@
 import uuid
 from datetime import datetime, timezone
 
+from app.modules.companies.interface.company_status_contract import (
+    get_company_status,
+)
 from app.modules.identity.domain.entities import User, validate_name
 from app.modules.identity.infrastructure.email_validator import EmailValidator
 from app.modules.identity.infrastructure.user_repository import (
@@ -25,6 +28,10 @@ class UserManagementValidationError(ValueError):
 
 class UserEmailConflictError(ValueError):
     """El correo ya está registrado, sin revelar su propietario."""
+
+
+class InactiveCompanyError(ValueError):
+    """La empresa esta inactiva: no admite altas nuevas de cuentas (RF-136)."""
 
 
 class LastActiveAdministratorError(ValueError):
@@ -58,7 +65,13 @@ def create_user(
     phone: str | None,
     company_id: str | None,
     users: InMemoryUserRepository,
+    conn=None,
 ) -> User:
+    """Crea una cuenta pendiente con invitacion de 168 h.
+
+    `conn` permite que el alta participe en la transaccion del llamador
+    (HU-19 RF-135: empresa y administrador inicial atomicos).
+    """
     if company_id is None:
         raise UserNotVisibleError("user not found")
     try:
@@ -70,6 +83,13 @@ def create_user(
         raise UserManagementValidationError("role is invalid")
     if users.find_by_email(clean_email) is not None:
         raise UserEmailConflictError("correo no disponible")
+    # RF-136: una empresa inactiva solo bloquea las altas nuevas y se evalúa
+    # en el escalón de conflictos, después del 422 estructural y de dominio.
+    # RF-139: solo bloquea el estado persistido exactamente `inactive`; un
+    # estado `None` (empresa heredada sin fila en `companies`, como
+    # `company_id="c1"` en fixtures de HU-13) NO bloquea.
+    if get_company_status(company_id) == "inactive":
+        raise InactiveCompanyError("empresa no activa")
     user = User(
         id=str(uuid.uuid4()),
         name=clean_name,
@@ -82,10 +102,10 @@ def create_user(
         invitation_status="pending",
     )
     try:
-        users.add(user)
+        users.add(user, conn)
     except EmailAlreadyStoredError as exc:
         raise UserEmailConflictError("correo no disponible") from exc
-    issue_invitation(user, users)
+    issue_invitation(user, users, conn)
     return user
 
 
@@ -119,7 +139,10 @@ def update_user(
             except EmailAlreadyStoredError as exc:
                 raise UserEmailConflictError("correo no disponible") from exc
             if user.invitation_status == "pending":
-                issue_invitation(user, users, conn)
+                try:
+                    issue_invitation(user, users, conn)
+                except EmailAlreadyStoredError as exc:
+                    raise UserEmailConflictError("correo no disponible") from exc
     return user, ("not-attempted" if email_changed and user.invitation_status == "pending" else None)
 
 

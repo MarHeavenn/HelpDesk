@@ -5,6 +5,7 @@ import AppShell from '@/layout/AppShell'
 import { APP_ROUTES, canView, firstAllowedRoute } from '@/lib/permissions'
 import { strings } from '@/lib/strings'
 import CreateTicketPage from '@/pages/CreateTicketPage'
+import CompaniesPage from '@/pages/CompaniesPage'
 import DashboardPage from '@/pages/DashboardPage'
 import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
@@ -143,12 +144,12 @@ export default function AppRoutes() {
                 <PlaceholderPage title={strings.routes.titles['/usuarios']} />
               }
             />
-            <Route
-              path="/empresas"
-              element={
-                <PlaceholderPage title={strings.routes.titles['/empresas']} />
-              }
-            />
+            </Route>
+
+            {/* RF-138: la sección tiene guarda propia de administrador; el
+                resto de roles salen por RequireRoutePermission a su ruta. */}
+            <Route element={<RequireRole allow={['administrador']} />}>
+              <Route path="/empresas" element={<CompaniesPage />} />
             </Route>
 
             <Route

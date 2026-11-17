@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import {
-  Bell,
   ChevronDown,
   CircleHelp,
   LogOut,
@@ -10,6 +9,8 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import type { NotificationsApi } from '@/api/notifications.api'
+import NotificationBell from '@/components/notifications/NotificationBell'
 import Avatar from '@/components/ui/Avatar'
 import { strings } from '@/lib/strings'
 import type { AuthUser } from '@/types/domain'
@@ -22,6 +23,7 @@ export default function Topbar({
   menuOpen,
   menuControls,
   menuButtonRef,
+  notificationsApi,
 }: {
   user: AuthUser
   onLogout: () => void | Promise<void>
@@ -29,6 +31,7 @@ export default function Topbar({
   menuOpen: boolean
   menuControls: string
   menuButtonRef: RefObject<HTMLButtonElement>
+  notificationsApi?: NotificationsApi
 }) {
   const searchRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -111,14 +114,7 @@ export default function Topbar({
       </form>
 
       <div className="ml-auto flex items-center gap-1">
-        <Link
-          to="/notificaciones"
-          aria-label={strings.shell.notifications}
-          title={strings.shell.notifications}
-          className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-        >
-          <Bell className="h-5 w-5" aria-hidden="true" />
-        </Link>
+        <NotificationBell api={notificationsApi} />
 
         <button
           type="button"

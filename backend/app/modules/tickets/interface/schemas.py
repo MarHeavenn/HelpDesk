@@ -203,3 +203,58 @@ class TicketSummaryResponse(BaseModel):
     sla: SlaResponse | None
     created_at: str
 
+
+class NotificationTicketResponse(BaseModel):
+    """Ticket referenciado por una notificacion (HU-15, RF-146).
+
+    Solo identificador y titulo: nunca descripcion ni otros datos del
+    ticket.
+    """
+
+    id: str
+    title: str
+
+
+class NotificationUserResponse(BaseModel):
+    """Usuario de una notificacion (HU-15, RF-146).
+
+    Solo identificador opaco y nombre visible. `name` es `None` si el
+    usuario ya no se puede resolver; nunca incluye correo, rol ni
+    credenciales.
+    """
+
+    id: str
+    name: str | None
+
+
+class NotificationResponse(BaseModel):
+    """Notificacion interna devuelta por la API (HU-15, RF-146).
+
+    Tipos de alerta de SLA (HU-16): `sla_near_due` y `sla_breached`.
+    Todos los campos se serializan siempre; los que no aplican van a
+    `null`. `company_id` es interno y no forma parte del contrato.
+    `created_at` y `read_at` van en ISO 8601 con offset UTC.
+    """
+
+    id: str
+    type: str
+    ticket: NotificationTicketResponse
+    recipient: NotificationUserResponse
+    actor: NotificationUserResponse
+    previous_value: str | None
+    new_value: str | None
+    created_at: str
+    read_at: str | None
+
+
+class UnreadCountResponse(BaseModel):
+    """Contador de notificaciones no leidas del actor (HU-15, RF-149)."""
+
+    count: int
+
+
+class MarkAllReadResponse(BaseModel):
+    """Resultado de marcar todas como leidas (HU-15, RF-151)."""
+
+    updated: int
+

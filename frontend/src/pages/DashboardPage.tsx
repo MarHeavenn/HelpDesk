@@ -5,6 +5,7 @@ import AssigneeCard from '@/components/dashboard/AssigneeCard'
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton'
 import DistributionCard from '@/components/dashboard/DistributionCard'
 import KpiCard from '@/components/dashboard/KpiCard'
+import NotificationsCard from '@/components/dashboard/NotificationsCard'
 import RecentTicketsTable from '@/components/dashboard/RecentTicketsTable'
 import SlaCompliancePanel from '@/components/dashboard/SlaCompliancePanel'
 import EmptyState from '@/components/ui/EmptyState'
@@ -12,13 +13,20 @@ import ErrorState from '@/components/ui/ErrorState'
 import PageHeader from '@/components/ui/PageHeader'
 import type { DashboardApi } from '@/api/dashboard.api'
 import { ApiError } from '@/api/httpClient'
+import type { NotificationsApi } from '@/api/notifications.api'
 import { useAuth } from '@/context/AuthContext'
 import { useTicketsDashboard } from '@/hooks/useDashboard'
 import { formatLongDate, greetingForHour } from '@/lib/dates'
 import { strings } from '@/lib/strings'
 
 /** Dashboard real de tickets y SLA en `/` (RF-91, RF-92, RF-102). */
-export default function DashboardPage({ api }: { api?: DashboardApi }) {
+export default function DashboardPage({
+  api,
+  notificationsApi,
+}: {
+  api?: DashboardApi
+  notificationsApi?: NotificationsApi
+}) {
   const { user, logout } = useAuth()
   const query = useTicketsDashboard(api)
   const dashboard = query.data
@@ -143,6 +151,8 @@ export default function DashboardPage({ api }: { api?: DashboardApi }) {
               <RecentTicketsTable tickets={dashboard.recent_tickets} />
             </>
           ) : null}
+
+          <NotificationsCard api={notificationsApi} />
         </div>
       ) : null}
     </>

@@ -11,10 +11,25 @@ import {
   buildTicketDashboard,
   createDashboardApi,
 } from '../helpers/dashboardFixtures'
+import { createNotificationsApi } from '../helpers/notificationFixtures'
+import type { NotificationsApi } from '@/api/notifications.api'
 import type { TicketDashboard } from '@/types/dashboard'
 
-function renderPage(api = createDashboardApi()) {
-  return renderApp(<DashboardPage api={api} />, { user: ADMIN })
+function emptyNotifications(): NotificationsApi {
+  return createNotificationsApi({
+    list: async () => [],
+    unreadCount: async () => ({ count: 0 }),
+  })
+}
+
+function renderPage(
+  api = createDashboardApi(),
+  notificationsApi: NotificationsApi = emptyNotifications(),
+) {
+  return renderApp(
+    <DashboardPage api={api} notificationsApi={notificationsApi} />,
+    { user: ADMIN },
+  )
 }
 
 describe('DashboardPage', () => {
@@ -154,10 +169,13 @@ describe('DashboardPage', () => {
     })
     const logout = vi.fn(async () => undefined)
 
-    renderApp(<DashboardPage api={api} />, {
-      user: ADMIN,
-      api: createAuthApi(ADMIN, { logout }),
-    })
+    renderApp(
+      <DashboardPage api={api} notificationsApi={emptyNotifications()} />,
+      {
+        user: ADMIN,
+        api: createAuthApi(ADMIN, { logout }),
+      },
+    )
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1))
     expect(
@@ -236,10 +254,13 @@ describe('DashboardPage', () => {
     })
     const logout = vi.fn(async () => undefined)
 
-    renderApp(<DashboardPage api={api} />, {
-      user: ADMIN,
-      api: createAuthApi(ADMIN, { logout }),
-    })
+    renderApp(
+      <DashboardPage api={api} notificationsApi={emptyNotifications()} />,
+      {
+        user: ADMIN,
+        api: createAuthApi(ADMIN, { logout }),
+      },
+    )
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1))
   })

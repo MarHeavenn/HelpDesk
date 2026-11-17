@@ -28,12 +28,19 @@ Reglas:
   derivarse de la configuracion vigente.
 """
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 from app.modules.sla.domain.entities import TicketSlaSnapshot
 from app.modules.sla.interface.contract import get_ticket_sla
 from app.modules.tickets.application.create_ticket import TicketValidationError
 from app.modules.tickets.domain.entities import (
+    CLOSED_STATUS,
+    NOTIFICATION_TYPE_REOPENED,
+    NOTIFICATION_TYPE_RESOLVED,
+    NOTIFICATION_TYPE_STATUS_CHANGED,
+    OPEN_STATUS,
+    RESOLVED_STATUS,
     RESOLVED_STATUSES,
     STATUS_FIELD,
     Ticket,
@@ -75,6 +82,7 @@ def update_ticket_status(
     actor_id: str,
     modifications: InMemoryTicketModificationLog,
     now: datetime | None = None,
+    notify: Callable[..., object] | None = None,
 ) -> Ticket:
     """Actualiza el estado del ticket resuelto y devuelve el ticket.
 
@@ -129,4 +137,18 @@ def update_ticket_status(
             changed_at=changed_at,
         )
     )
+    if notify is not None:
+        if new_status == RESOLVED_STATUS:
+            event_type = NOTIFICATION_TYPE_RESOLVED
+        elif previous_status == CLOSED_STATUS and new_status == OPEN_STATUS:
+            event_type = NOTIFICATION_TYPE_REOPENED
+        else:
+            event_type = NOTIFICATION_TYPE_STATUS_CHANGED
+        notify(
+            event_type=event_type,
+            ticket=ticket,
+            actor_id=actor_id,
+            previous_value=previous_status,
+            new_value=new_status,
+        )
     return ticket

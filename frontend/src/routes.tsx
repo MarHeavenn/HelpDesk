@@ -10,6 +10,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import MyTicketsPage from '@/pages/MyTicketsPage'
+import NotificationsPage from '@/pages/NotificationsPage'
 import PlaceholderPage from '@/pages/PlaceholderPage'
 import ProfilePage from '@/pages/ProfilePage'
 import TicketsPage from '@/pages/TicketsPage'
@@ -152,14 +153,7 @@ export default function AppRoutes() {
               <Route path="/empresas" element={<CompaniesPage />} />
             </Route>
 
-            <Route
-              path="/notificaciones"
-              element={
-                <PlaceholderPage
-                  title={strings.routes.titles['/notificaciones']}
-                />
-              }
-            />
+            <Route path="/notificaciones" element={<NotificationsPage />} />
             <Route path="/cuenta" element={<Navigate to="/cuenta/perfil" replace />} />
             <Route path="/cuenta/perfil" element={<ProfilePage />} />
             <Route path="*" element={<NotFoundPage />} />

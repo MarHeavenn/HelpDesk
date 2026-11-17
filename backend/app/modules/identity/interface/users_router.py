@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.modules.identity.application.users import (
+    InactiveCompanyError,
     UserEmailConflictError,
     UserManagementValidationError,
     UserNotVisibleError,
@@ -20,7 +21,10 @@ from app.modules.identity.infrastructure.user_repository import get_user_reposit
 from app.modules.identity.interface.dependencies import get_current_user
 from app.modules.identity.interface.schemas import (
     CreateUserRequest, UserRepresentation, UpdateRoleRequest, UpdateStatusRequest,
-    UpdateUserRequest,
+    UpdateUserRequest, UnassignedAccountResponse,
+)
+from app.modules.identity.interface.company_account_contract import (
+    list_unassigned_accounts as _list_unassigned_accounts,
 )
 from app.modules.identity.infrastructure.session_store import get_session_store
 
@@ -55,6 +59,25 @@ def list_users(current: dict = Depends(get_current_user)) -> list[UserRepresenta
     return [_representation(user) for user in users]
 
 
+@router.get("/unassigned", response_model=list[UnassignedAccountResponse])
+def list_unassigned_accounts_endpoint(
+    current: dict = Depends(get_current_user),
+) -> list[UnassignedAccountResponse]:
+    if not (current.get("role") == "administrador" and current.get("company_id") is None):
+        raise HTTPException(status_code=404, detail="user not found")
+    accounts = _list_unassigned_accounts(get_user_repository())
+    return [
+        UnassignedAccountResponse(
+            id=account.id,
+            name=account.name,
+            email=account.email,
+            role=account.role,
+            status=account.status,
+        )
+        for account in accounts
+    ]
+
+
 @router.get("/{user_id}", response_model=UserRepresentation)
 def get_user(user_id: str, current: dict = Depends(get_current_user)) -> UserRepresentation:
     _require_admin(current)
@@ -84,6 +107,8 @@ def create_user_endpoint(
     except UserManagementValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except UserEmailConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except InactiveCompanyError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"user": _representation(user), "email_status": send_invitation(user, user.invitation_token)}
 

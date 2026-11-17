@@ -100,6 +100,39 @@ Cada comprobación se imprime como `OK`; el proceso termina con código 0 si tod
 
 > **Persistencia en memoria:** al detener el servidor se pierden los tickets y los usuarios registrados. Los usuarios demo se recrean en cada arranque. PostgreSQL todavía no está conectado.
 
+### Semilla del administrador de plataforma
+
+La cuenta con rol `administrador` y sin empresa —la que gestiona el catálogo completo de empresas clientes— no se crea desde la interfaz ni desde la API: se aprovisiona con una semilla idempotente que se ejecuta fuera de la aplicación (RO-01). Requiere las migraciones aplicadas y no guarda credenciales en el repositorio.
+
+```powershell
+cd backend
+$env:PLATFORM_ADMIN_EMAIL = "plataforma@example.com"
+$env:PLATFORM_ADMIN_NAME = "Administración de plataforma"
+$env:PLATFORM_ADMIN_PASSWORD = "una-clave-de-operacion"
+..\.venv\Scripts\python.exe scripts\seed_platform_admin.py
+```
+
+- Ejecutarla dos veces no crea cuentas adicionales ni cambia datos existentes.
+- Con la cuenta ya `active` y aceptada no hace nada; si está `deactivated` la reactiva conservando el hash.
+- Con la cuenta pendiente de invitación, con otro rol o con empresa falla sin modificarla e informa del motivo.
+- `PLATFORM_ADMIN_NAME` y `PLATFORM_ADMIN_PASSWORD` solo son obligatorias cuando hay que crear la cuenta; el correo lo es siempre. La contraseña se guarda únicamente como hash Argon2id.
+- La salida nunca muestra la contraseña, el hash, el token ni el enlace de invitación. Termina con código 0 si tiene éxito y 1 si falla.
+
+### Entrega de correo de invitaciones (requisito de operación)
+
+La entrega de las invitaciones (alta con administrador inicial, invitación o reenvío del administrador de empresa y operaciones de invitación de HU-13) necesita un servicio de correo configurado fuera de la aplicación (RO-02). Variables opcionales:
+
+| Variable | Uso |
+| --- | --- |
+| `SMTP_HOST` | Servidor SMTP. Sin él no se intenta el envío. |
+| `SMTP_PORT` | Puerto (por defecto `587`). |
+| `SMTP_USE_TLS` | `true` (por defecto) para STARTTLS. |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | Credenciales si el servidor las exige. |
+| `SMTP_FROM` | Remitente (por defecto `no-reply@helpdesk.local`). |
+| `INVITATION_BASE_URL` | Base del enlace de aceptación (por defecto `http://localhost:5173`). |
+
+Sin `SMTP_HOST` la cuenta y la invitación se crean o rotan igual, el código de éxito no cambia y la respuesta informa `email_status: "not-attempted"`; el acceso no se habilita hasta aceptar la invitación y se reintenta con la misma operación cuando el servicio esté configurado. Si la entrega falla se informa `email_status: "failed"` y la cuenta permanece `active`/`pending`. El token y el enlace solo viajan en el correo entregado: nunca aparecen en una respuesta HTTP, en la interfaz ni en la salida de los scripts.
+
 ## Flujo de ramas y entrega
 
 - `develop` es la rama de integración: cada historia sale de `develop` en una rama `feature/<HU>-<descripcion>` y se integra con un PR **contra `develop`**.

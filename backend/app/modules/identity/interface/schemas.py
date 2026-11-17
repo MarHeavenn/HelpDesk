@@ -105,3 +105,13 @@ class AcceptInvitationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     password: str
+
+
+class UnassignedAccountResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    email: str
+    role: str
+    status: str

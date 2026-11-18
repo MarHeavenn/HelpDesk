@@ -51,6 +51,12 @@ function stubDashboardFetch(): void {
     if (url.includes('/api/dashboard/sla')) {
       return jsonResponse(buildSlaDashboard())
     }
+    if (url.includes('/api/notifications/unread-count')) {
+      return jsonResponse({ count: 0 })
+    }
+    if (url.includes('/api/notifications')) {
+      return jsonResponse([])
+    }
     if (url.includes('/api/tickets') || url.includes('/api/technicians')) {
       return jsonResponse([])
     }

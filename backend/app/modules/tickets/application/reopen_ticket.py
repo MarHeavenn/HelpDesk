@@ -11,10 +11,12 @@ ni fecha de creacion. El registro reutiliza `TicketModification`, de modo
 que el historial de HU-09 lo vera sin un formato nuevo.
 """
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 from app.modules.tickets.domain.entities import (
     CLOSED_STATUS,
+    NOTIFICATION_TYPE_REOPENED,
     OPEN_STATUS,
     STATUS_FIELD,
     Ticket,
@@ -30,6 +32,7 @@ def reopen_ticket(
     actor_id: str,
     modifications: InMemoryTicketModificationLog,
     now: datetime | None = None,
+    notify: Callable[..., object] | None = None,
 ) -> Ticket:
     """Reabre el ticket cerrado y devuelve el ticket en `Abierto`.
 
@@ -55,4 +58,12 @@ def reopen_ticket(
             changed_at=changed_at,
         )
     )
+    if notify is not None:
+        notify(
+            event_type=NOTIFICATION_TYPE_REOPENED,
+            ticket=ticket,
+            actor_id=actor_id,
+            previous_value=previous_status,
+            new_value=OPEN_STATUS,
+        )
     return ticket

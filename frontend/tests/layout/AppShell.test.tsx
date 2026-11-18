@@ -4,12 +4,29 @@ import userEvent from '@testing-library/user-event'
 
 import AppShell from '@/layout/AppShell'
 import PageHeader from '@/components/ui/PageHeader'
-import { ADMIN, CLIENTE, TECNICO, createAuthApi, renderApp } from '../helpers/renderApp'
+import { createNotificationsApi } from '../helpers/notificationFixtures'
+import {
+  ADMIN,
+  CLIENTE,
+  TECNICO,
+  createAuthApi,
+  renderApp,
+} from '../helpers/renderApp'
 import type { AuthUser } from '@/types/domain'
 
-function renderShell(user: AuthUser = ADMIN, route = '/') {
+function emptyNotifications() {
+  return createNotificationsApi({
+    unreadCount: async () => ({ count: 0 }),
+  })
+}
+
+function renderShell(
+  user: AuthUser = ADMIN,
+  route = '/',
+  notificationsApi = emptyNotifications(),
+) {
   return renderApp(
-    <AppShell>
+    <AppShell notificationsApi={notificationsApi}>
       <PageHeader
         title="Dashboard"
         subtitle="Resumen operativo"
@@ -44,6 +61,20 @@ describe('AppShell', () => {
     const banner = within(screen.getByRole('banner'))
     expect(banner.getByRole('link', { name: 'Notificaciones' })).toBeInTheDocument()
     expect(banner.getByRole('button', { name: 'Ayuda' })).toBeInTheDocument()
+  })
+
+  it('muestra la insignia con las notificaciones sin leer', async () => {
+    const notificationsApi = createNotificationsApi({
+      unreadCount: async () => ({ count: 2 }),
+    })
+    renderShell(ADMIN, '/', notificationsApi)
+
+    const banner = within(await screen.findByRole('banner'))
+    const link = await banner.findByRole('link', {
+      name: 'Notificaciones, 2 sin leer',
+    })
+
+    expect(within(link).getByTestId('notification-badge')).toHaveTextContent('2')
   })
 
   it('muestra al administrador toda la navegación', async () => {
@@ -158,7 +189,7 @@ describe('AppShell', () => {
   it('cierra sesión desde el menú y vuelve a /login', async () => {
     const api = createAuthApi(ADMIN)
     renderApp(
-      <AppShell>
+      <AppShell notificationsApi={emptyNotifications()}>
         <p>contenido</p>
       </AppShell>,
       { api },

@@ -161,6 +161,17 @@ class InMemoryUserRepository:
             )
         return self.find_by_email(key)
 
+    def cache_persistent_user(self, user: User) -> User:
+        """Incorpora una cuenta ya leida de PostgreSQL sin modificarla."""
+        key = normalize_email(user.email)
+        with self.lock:
+            existing = self._by_email.get(key)
+            if existing is not None:
+                return existing
+            self._by_email[key] = user
+            self._by_id[user.id] = user
+            return user
+
     def find_by_id(self, user_id: str) -> User | None:
         """Busca por id; None si no existe."""
         return self._by_id.get(user_id)

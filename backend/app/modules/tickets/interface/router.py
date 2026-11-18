@@ -62,6 +62,7 @@ from app.modules.tickets.application.list_attention_tickets import (
     list_attention_tickets,
 )
 from app.modules.tickets.application.list_tickets import list_visible_tickets
+from app.modules.tickets.application.notify_ticket_event import notify_ticket_event
 from app.modules.tickets.application.reopen_ticket import reopen_ticket
 from app.modules.tickets.application.set_ticket_priority import set_ticket_priority
 from app.modules.tickets.application.update_ticket_status import (
@@ -559,6 +560,7 @@ def set_status_endpoint(
             status=payload.status,
             actor_id=current["id"],
             modifications=get_ticket_modification_log(),
+            notify=notify_ticket_event,
         )
     except TicketValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -588,6 +590,7 @@ def reopen_ticket_endpoint(
         ticket=ticket,
         actor_id=current["id"],
         modifications=get_ticket_modification_log(),
+        notify=notify_ticket_event,
     )
     return _ticket_response(updated)
 
@@ -623,6 +626,7 @@ def set_assignee_endpoint(
             actor_id=current["id"],
             resolve_technician=lambda technician_id: candidate,
             assignments=get_assignment_log(),
+            notify=notify_ticket_event,
         )
     except TicketValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

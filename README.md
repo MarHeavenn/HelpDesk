@@ -68,24 +68,37 @@ Abre `http://localhost:5173/login` e inicia sesión con una de las cuentas demo.
 
 ### Usuarios de desarrollo
 
-`dev_server.py` crea automáticamente un administrador y un técnico, porque no existe un endpoint público para esos roles:
+`dev_server.py` crea automáticamente un administrador, un técnico y un cliente de demostración:
 
 | Rol | Correo |
 | --- | --- |
 | Administrador | `admin@helpdesk.dev` |
 | Técnico | `tecnico@helpdesk.dev` |
+| Cliente | `cliente@helpdesk.dev` |
 
 Si no se define una contraseña, se genera una aleatoria y se muestra en la consola al arrancar. Se puede fijar con variables de entorno:
+
+Si una cuenta demo ya existe en PostgreSQL, se reutiliza sin cambiar su contraseña. En ese caso, si la contraseña indicada no coincide, la consola avisa de que debe usarse la contraseña anterior.
 
 ```powershell
 $env:DEV_ADMIN_PASSWORD = "una-clave-local"
 $env:DEV_TECH_PASSWORD = "otra-clave-local"
+$env:DEV_CLIENT_PASSWORD = "clave-local-cliente"
 ..\.venv\Scripts\python.exe dev_server.py
 ```
 
-Variables disponibles: `HOST`, `PORT`, `DEV_ADMIN_NAME`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`, `DEV_TECH_NAME`, `DEV_TECH_EMAIL`, `DEV_TECH_PASSWORD`.
+Variables disponibles: `HOST`, `PORT`, y `DEV_ADMIN_*`, `DEV_TECH_*`, `DEV_CLIENT_*` para `NAME`, `EMAIL` y `PASSWORD`.
 
 No se deben guardar contraseñas reales en el repositorio.
+
+### Ver alertas de SLA
+
+1. Inicia el backend con `dev_server.py` y el frontend con `npm run dev` como se indica arriba. Usa el Python del entorno virtual disponible (por ejemplo, `backend\.venv\Scripts\python.exe` desde la raíz).
+2. Abre <http://localhost:5173/login> e inicia sesión como administrador o técnico con la contraseña configurada o impresa al arrancar.
+3. Abre la campana o la página **Notificaciones**. La semilla incluye un ticket próximo al vencimiento y otro vencido; verás alertas del sistema para los responsables. El ticket próximo a vencer pasa a incumplido con el tiempo.
+4. Repite la consulta: no se generan duplicados para el mismo destinatario, tipo y vencimiento. Puedes marcar tus avisos como leídos.
+
+La generación ocurre al consultar notificaciones y el frontend actualiza mediante sondeo cada 30 segundos. En modo memoria los datos se pierden al detener el backend.
 
 ### Smoke manual de tickets
 

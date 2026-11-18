@@ -367,6 +367,68 @@ export const strings = {
       commentAdded: 'Comentario añadido.',
     },
   },
+  notifications: {
+    title: 'Notificaciones',
+    subtitle: 'Avisos de tus tickets y de la actividad que supervisas.',
+    loading: 'Cargando notificaciones',
+    listLabel: 'Listado de notificaciones',
+    unreadDot: 'No leída',
+    emptyTitle: 'Aún no tienes notificaciones',
+    emptyBody: 'Cuando cambie el estado de un ticket aparecerá aquí.',
+    emptyFilteredTitle: 'No tienes notificaciones sin leer',
+    emptyFilteredBody: 'Has revisado todos tus avisos.',
+    errorTitle: 'No se pudieron cargar las notificaciones',
+    errorBody: 'Revisa tu conexión e inténtalo de nuevo.',
+    actionError:
+      'No se pudo actualizar la notificación. Revisa tu conexión e inténtalo de nuevo.',
+    filters: {
+      label: 'Filtrar notificaciones',
+      all: 'Todas',
+      unread: 'No leídas',
+    },
+    actions: {
+      markRead: 'Marcar como leída',
+      markingRead: 'Marcando...',
+      markAllRead: 'Marcar todas como leídas',
+      markingAllRead: 'Marcando...',
+    },
+    recipient: (name: string) => `Para: ${name}`,
+    unknownUser: 'Usuario desconocido',
+    actorPrefix: 'por',
+    bellLabel: (count: number) =>
+      count > 0 ? `Notificaciones, ${count} sin leer` : 'Notificaciones',
+    badge: (count: number) => (count > 9 ? '9+' : String(count)),
+    dashboardTitle: 'Novedades',
+    dashboardViewAll: 'Ver todas',
+    dashboardLoading: 'Cargando novedades',
+    dashboardEmpty: 'No tienes novedades recientes.',
+    dashboardError: 'No se pudieron cargar las novedades.',
+    types: {
+      ticket_assigned: 'Asignación',
+      ticket_reassigned: 'Reasignación',
+      ticket_status_changed: 'Cambio de estado',
+      ticket_resolved: 'Resuelto',
+      ticket_reopened: 'Reapertura',
+      sla_near_due: 'SLA por vencer',
+      sla_breached: 'SLA incumplido',
+    },
+    messages: {
+      ticket_assigned: (name: string | null) =>
+        name ? `Ticket asignado a ${name}` : 'Ticket asignado',
+      ticket_reassigned: (name: string | null) =>
+        name ? `Ticket reasignado a ${name}` : 'Ticket reasignado',
+      ticket_status_changed: (
+        previous: string | null,
+        next: string | null,
+      ) => `Estado actualizado: ${previous ?? '—'} → ${next ?? '—'}`,
+      ticket_resolved: () => 'Ticket resuelto',
+      ticket_reopened: () => 'Ticket reabierto',
+      sla_near_due: (due: string | null) =>
+        due ? `SLA por vencer: vence ${due}` : 'SLA por vencer',
+      sla_breached: (due: string | null) =>
+        due ? `SLA incumplido: venció ${due}` : 'SLA incumplido',
+    },
+  },
   common: {
     loading: 'Cargando...',
     retry: 'Reintentar',

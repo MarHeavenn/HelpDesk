@@ -27,6 +27,9 @@ from app.modules.tickets.interface.dashboard_router import (
 from app.modules.tickets.interface.history_router import (
     router as history_router,
 )
+from app.modules.tickets.interface.notifications_router import (
+    router as notifications_router,
+)
 from app.modules.tickets.interface.router import router as tickets_router
 
 # Origenes explicitos del frontend (sin comodin "*" con credenciales:
@@ -86,6 +89,7 @@ app.include_router(tickets_router)
 app.include_router(assignments_router)
 app.include_router(comments_router)
 app.include_router(history_router)
+app.include_router(notifications_router)
 app.include_router(sla_router)
 app.include_router(sla_dashboard_router)
 app.include_router(tickets_dashboard_router)

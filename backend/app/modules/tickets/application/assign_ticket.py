@@ -30,6 +30,8 @@ from typing import Protocol
 
 from app.modules.tickets.application.create_ticket import TicketValidationError
 from app.modules.tickets.domain.entities import (
+    NOTIFICATION_TYPE_ASSIGNED,
+    NOTIFICATION_TYPE_REASSIGNED,
     AssignmentRecord,
     Ticket,
     is_valid_uuid_format,
@@ -57,6 +59,7 @@ def assign_ticket(
     resolve_technician: Callable[[object], _TechnicianView | None],
     assignments: InMemoryAssignmentLog,
     now: datetime | None = None,
+    notify: Callable[..., object] | None = None,
 ) -> Ticket:
     """Asigna o reasigna el tecnico del ticket resuelto y lo devuelve.
 
@@ -82,6 +85,7 @@ def assign_ticket(
         return ticket
 
     previous_assignee_id = ticket.assignee_id
+    previous_assignee_name = ticket.assignee_name
     ticket.assignee_id = technician.id
     ticket.assignee_name = technician.name
     assignments.add(
@@ -93,4 +97,16 @@ def assign_ticket(
             assigned_at=now if now is not None else datetime.now(timezone.utc),
         )
     )
+    if notify is not None:
+        notify(
+            event_type=(
+                NOTIFICATION_TYPE_ASSIGNED
+                if previous_assignee_id is None
+                else NOTIFICATION_TYPE_REASSIGNED
+            ),
+            ticket=ticket,
+            actor_id=actor_id,
+            previous_value=previous_assignee_name,
+            new_value=technician.name,
+        )
     return ticket

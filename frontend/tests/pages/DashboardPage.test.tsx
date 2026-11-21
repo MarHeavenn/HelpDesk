@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { createAuthApi } from '../helpers/renderApp'
 import DashboardPage from '@/pages/DashboardPage'
 import { ApiError } from '@/api/httpClient'
-import { ADMIN, renderApp } from '../helpers/renderApp'
+import { ADMIN, TECNICO, renderApp } from '../helpers/renderApp'
 import {
   buildSlaDashboard,
   buildTicketDashboard,
@@ -71,6 +71,40 @@ describe('DashboardPage', () => {
       name: 'Cumplimiento de SLA',
     })
     expect(await within(sla).findByText('66.67%')).toBeInTheDocument()
+  })
+
+  it('integra el panel de alertas y la cifra real en el KPI Abiertos', async () => {
+    renderPage()
+
+    const open = await screen.findByRole('article', { name: 'Abiertos' })
+    await waitFor(() =>
+      expect(open).toHaveTextContent('2 requieren atención'),
+    )
+    expect(
+      await screen.findByRole('region', { name: 'Alertas de SLA' }),
+    ).toBeInTheDocument()
+  })
+
+  it('muestra el panel también al técnico', async () => {
+    renderApp(<DashboardPage api={createDashboardApi()} />, { user: TECNICO })
+
+    expect(
+      await screen.findByRole('region', { name: 'Alertas de SLA' }),
+    ).toBeInTheDocument()
+  })
+
+  it('no muestra la cifra del KPI cuando no hay atención o falla la consulta', async () => {
+    const api = createDashboardApi({
+      getAttention: vi.fn(async () => []),
+    })
+
+    renderPage(api)
+
+    const open = await screen.findByRole('article', { name: 'Abiertos' })
+    expect(open).not.toHaveTextContent('requieren atención')
+    expect(
+      await screen.findByText('No hay tickets que requieran atención'),
+    ).toBeInTheDocument()
   })
 
   it('muestra esqueletos mientras carga el resumen', async () => {

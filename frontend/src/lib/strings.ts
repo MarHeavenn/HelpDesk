@@ -129,6 +129,24 @@ export const strings = {
       errorBody: 'Revisa tu conexión e inténtalo de nuevo.',
       loading: 'Cargando cumplimiento de SLA',
     },
+    alerts: {
+      title: 'Alertas de SLA',
+      subtitle: 'Tickets que requieren atención ahora',
+      loading: 'Cargando alertas de SLA',
+      emptyTitle: 'No hay tickets que requieran atención',
+      emptyBody: 'Todos los tickets activos están dentro del tiempo objetivo.',
+      errorTitle: 'No se pudo cargar las alertas',
+      errorBody: 'Revisa tu conexión e inténtalo de nuevo.',
+      summaryLabel: 'Resumen de alertas',
+      listLabel: 'Tickets en alerta',
+      nearDue: 'Próximos a vencer',
+      breached: 'Vencidos',
+      remaining: (minutes: number) =>
+        `Restan ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`,
+      countHint: (count: number) =>
+        `${count} ${count === 1 ? 'requiere' : 'requieren'} atención`,
+      viewDetailLabel: (id: string) => `Ver detalle del ticket ${id}`,
+    },
   },
   auth: {
     title: 'Iniciar sesión',
@@ -228,6 +246,11 @@ export const strings = {
       en_riesgo: 'En riesgo',
       cumplido: 'Cumplido',
       incumplido: 'Incumplido',
+    },
+    slaSignal: {
+      riesgo: 'Próximo a vencer',
+      vencido: 'Vencido',
+      sin_sla: 'Sin SLA',
     },
     pagination: {
       label: 'Paginación',

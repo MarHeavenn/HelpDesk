@@ -7,6 +7,7 @@ import { PriorityBadge, StatusBadge } from '@/components/ui/Badges'
 import ErrorState from '@/components/ui/ErrorState'
 import Modal from '@/components/ui/Modal'
 import Skeleton from '@/components/ui/Skeleton'
+import SlaSignal from '@/components/ui/SlaSignal'
 import { useAuth } from '@/context/AuthContext'
 import {
   ticketKeys,
@@ -239,6 +240,9 @@ export default function TicketDetailModal({
                 {strings.tickets.detail.sla}
               </dt>
               <dd className="mt-0.5 text-slate-800">
+                <span className="mb-1 block">
+                  <SlaSignal sla={ticket.sla ?? null} />
+                </span>
                 {ticket.sla ? (
                   <span className="block space-y-0.5">
                     <span className="block">

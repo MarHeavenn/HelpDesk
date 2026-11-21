@@ -4,10 +4,10 @@
 
 - HU-01..HU-12, HU-14 y HU-21 **mergeadas en `develop`**; la persistencia de
   los módulos sigue en memoria (TSK-025 deja PostgreSQL preparado).
-- HU-22 (creación y detalle) y HU-23 (listados) en la rama
-  `feature/HU-20-tickets-frontend`, sin commit ni PR todavía.
-- Suites al 2026-11-13: backend **1191 passed, 14 skipped**; frontend
-  **22 archivos / 155 pruebas**; `lint` y `build` en verde.
+- En `feature/HU-20-tickets-frontend`: HU-22/HU-23 ya commiteadas y HU-24
+  commiteada en esta entrega; PR contra `develop` pendiente para HU-24.
+- Suites: backend al 2026-11-13 **1191 passed, 14 skipped**; frontend al
+  2026-11-21 **25 archivos / 174 pruebas**; `lint` y `build` en verde.
 - HU-23: `/tickets` y `/mis-tickets` reales sobre un `TicketListPage` común;
   filtros, orden y paginación en cliente con la URL como fuente de verdad.
   El técnico ve sus asignados en «Mis tickets»; admin y cliente, los suyos.
@@ -18,6 +18,13 @@
 - Smoke manual ejecutado el 2026-11-13 con las tres cuentas: API real (90
   comprobaciones) e interfaz real en Chrome headless (27), en verde.
 - HU-11 y HU-12: dashboard real de tickets y de SLA en `/`.
+- HU-24 **implementada y validada** en esta rama; spec/plan/tareas y validación
+  RF por RF en `specs/features/HU-24-visual-panels-alerts/` (RF-124 a RF-132).
+  Tarjeta Trello `2tpTJODL`. Fuentes reales: `/api/tickets/requiring-attention`,
+  `/api/dashboard/tickets` y `/api/dashboard/sla`. Decisiones del usuario: solo
+  APIs reales (sin HU-16/HU-18), sin contador en la campana y panel en `/` +
+  señal en tablas y detalle. `recent_tickets` no trae `sla`; no se tocó el
+  backend. Enlace de cada fila: `/tickets?q=<id>` (el detalle es modal).
 
 ## Decisiones clave
 

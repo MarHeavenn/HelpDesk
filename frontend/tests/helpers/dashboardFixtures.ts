@@ -6,6 +6,7 @@ import type {
   SlaPriorityBreakdown,
   TicketDashboard,
 } from '@/types/dashboard'
+import type { TicketSla, TicketSummary } from '@/types/ticket'
 
 const PRIORITY_BREAKDOWN: SlaPriorityBreakdown[] = [
   {
@@ -161,6 +162,51 @@ export function buildEmptySlaDashboard(): SlaDashboard {
   })
 }
 
+const RISK_SLA: TicketSla = {
+  target_minutes: 240,
+  started_at: '2026-11-21T08:00:00+00:00',
+  due_at: '2026-11-21T12:00:00+00:00',
+  elapsed_minutes: 220,
+  remaining_minutes: 20,
+  status: 'en_riesgo',
+  near_due: true,
+  breached: false,
+}
+
+const BREACHED_SLA: TicketSla = {
+  ...RISK_SLA,
+  due_at: '2026-11-21T10:00:00+00:00',
+  elapsed_minutes: 260,
+  remaining_minutes: 0,
+  status: 'incumplido',
+  near_due: false,
+  breached: true,
+}
+
+/** Tickets del listado de atención (HU-10): uno en riesgo y uno vencido. */
+export function buildAttentionTickets(): TicketSummary[] {
+  return [
+    {
+      id: 'ticket-risk',
+      title: 'Servidor caído',
+      priority: 'Crítica',
+      status: 'En progreso',
+      assignee: { id: 'tech-1', name: 'Ana' },
+      sla: RISK_SLA,
+      created_at: '2026-11-21T08:00:00+00:00',
+    },
+    {
+      id: 'ticket-breach',
+      title: 'Error de facturación',
+      priority: 'Alta',
+      status: 'Abierto',
+      assignee: null,
+      sla: BREACHED_SLA,
+      created_at: '2026-11-21T06:00:00+00:00',
+    },
+  ]
+}
+
 export function createDashboardApi(
   overrides: Partial<DashboardApi> = {},
 ): DashboardApi {
@@ -169,6 +215,7 @@ export function createDashboardApi(
     getSla: vi.fn(async (days) =>
       buildSlaDashboard({ period_days: days }),
     ),
+    getAttention: vi.fn(async () => buildAttentionTickets()),
     ...overrides,
   }
 }

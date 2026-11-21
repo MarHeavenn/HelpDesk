@@ -51,6 +51,16 @@ def database_url() -> str:
     return f"postgresql://{user}:{quote(password, safe='')}@{host}:{port}/{database}"
 
 
+def postgres_configured() -> bool:
+    """Indica que la aplicación debe usar PostgreSQL."""
+    return bool(os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_PASSWORD"))
+
+
+def in_memory_fallback_enabled() -> bool:
+    """Seam explícito para tests unitarios sin PostgreSQL."""
+    return os.environ.get("HELPDESK_ALLOW_IN_MEMORY") == "1"
+
+
 def connect() -> psycopg.Connection:
     """Abre una conexion con filas representadas como diccionarios."""
     return psycopg.connect(database_url(), row_factory=dict_row)

@@ -29,6 +29,13 @@ export const TECNICO: AuthUser = {
   role: 'tecnico',
 }
 
+export const SUPERVISOR: AuthUser = {
+  id: 'u-supervisor',
+  name: 'Sofía Supervisora',
+  email: 'supervisor@helpdesk.dev',
+  role: 'supervisor',
+}
+
 export const CLIENTE: AuthUser = {
   id: 'u-client',
   name: 'Carla Cliente',

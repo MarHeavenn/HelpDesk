@@ -584,6 +584,7 @@ def test_non_valid_session_returns_401_before_invalid_identifier_and_body(
     assert token
 
     if session_state == "invalid":
+        client_api.cookies.clear()
         client_api.cookies.set(SESSION_COOKIE_NAME, "token-invalido")
     elif session_state == "revoked":
         assert client_api.post("/api/auth/logout").status_code == 204

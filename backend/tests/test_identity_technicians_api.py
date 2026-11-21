@@ -38,6 +38,7 @@ from app.modules.identity.interface.dependencies import SESSION_COOKIE_NAME
 
 client = TestClient(app)
 PASSWORD = "Secreta123"
+COMPANY = "company-a"
 TECHNICIANS_404_BODY = {"detail": "technicians not found"}
 
 
@@ -60,6 +61,7 @@ def _provision(role: str, name: str, email: str) -> dict[str, str]:
         role=role,
         users=get_user_repository(),
     )
+    user.company_id = COMPANY
     return {
         "id": user.id,
         "name": user.name,

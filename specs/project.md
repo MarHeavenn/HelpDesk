@@ -47,6 +47,8 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-09 (registrar historial y trazabilidad del ticket): ver `specs/features/HU-09-ticket-history/` (implementada y validada en `develop`).
 - HU-10 (alertas SLA): ver `specs/features/HU-10-sla-alerts/` (implementada y validada en `develop`).
 - HU-14 (configuración de SLA): ver `specs/features/HU-14-sla-config/` (implementada y validada en `develop`).
+- HU-15 (notificaciones de tickets): ver `specs/features/HU-15-ticket-notifications/` (implementada; RF-144 a RF-155).
+- HU-16 (notificaciones de SLA): ver `specs/features/HU-16-sla-breach-notifications/` (implementación en validación; RF-156 a RF-164).
 - HU-11 (dashboard de tickets): ver `specs/features/HU-11-tickets-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-81 a RF-92).
 - HU-12 (dashboard de cumplimiento de SLA): ver `specs/features/HU-12-sla-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-93 a RF-104).
 - HU-20 (frontend del MVP): ver `specs/features/HU-20-frontend/` (spec, plan y tareas aprobadas; sin código).
@@ -54,4 +56,4 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-24 (paneles visuales y componentes de alertas): ver
   `specs/features/HU-24-visual-panels-alerts/` (implementada y validada; RF-124 a
   RF-132). Señal de SLA reutilizable, panel de alertas y KPI con cifra real.
-- HU-13 y HU-15 a HU-19: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
+- HU-17 y HU-18: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

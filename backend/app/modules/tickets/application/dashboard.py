@@ -20,8 +20,9 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 )
 
 ADMIN_ROLE = "administrador"
+SUPERVISOR_ROLE = "supervisor"
 TECHNICIAN_ROLE = "tecnico"
-MANAGEMENT_ROLES = frozenset({ADMIN_ROLE, TECHNICIAN_ROLE})
+MANAGEMENT_ROLES = frozenset({ADMIN_ROLE, SUPERVISOR_ROLE, TECHNICIAN_ROLE})
 DENIED_MESSAGE = "tickets not found"
 UNASSIGNED_LABEL = "Sin asignar"
 NO_PRIORITY_LABEL = "Sin prioridad"
@@ -93,6 +94,7 @@ def get_ticket_dashboard(
     actor_role: str,
     tickets: InMemoryTicketRepository,
     technicians: Sequence[TechnicianRef] = (),
+    company_id: str | None = None,
     now: datetime | None = None,
 ) -> TicketDashboard:
     """Construye el resumen agregado del alcance del actor.
@@ -107,6 +109,10 @@ def get_ticket_dashboard(
 
     generated_at = now or datetime.now(timezone.utc)
     snapshot = tickets.list_all()
+    if company_id is not None:
+        snapshot = [
+            ticket for ticket in snapshot if ticket.company_id == company_id
+        ]
     if actor_role == TECHNICIAN_ROLE:
         snapshot = [
             ticket for ticket in snapshot if ticket.assignee_id == actor_id

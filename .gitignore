@@ -19,6 +19,7 @@ coverage/
 # Archivos generados
 *.log
 .codegraph/
+graphify-out/
 .DS_Store
 Thumbs.db
 

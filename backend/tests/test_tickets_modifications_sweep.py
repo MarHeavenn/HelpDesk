@@ -288,7 +288,8 @@ def test_sweep_each_catalog_value_is_accepted():
     assert STATUSES == ("Abierto", "En progreso", "Resuelto", "Cerrado")
 
     _register_and_login(client)
-    _provision_and_login()
+    actor = _provision_and_login()
+    assignee = {"id": actor.id, "name": actor.name}
 
     for priority in PRIORITIES:
         created = _create_ticket(client)
@@ -326,7 +327,8 @@ def test_sweep_modification_raw_composition():
     assert raw_creation["assignee"] is None
     assert '"priority":null' in creation.text
     assert '"assignee":null' in creation.text
-    _provision_and_login()
+    actor = _provision_and_login()
+    assignee = {"id": actor.id, "name": actor.name}
 
     # Modificacion de estado antes de fijar prioridad: `priority` va null.
     status_change = _put("status", created["id"], {"status": "En progreso"})
@@ -338,7 +340,7 @@ def test_sweep_modification_raw_composition():
         "description": "Descripcion de barrido",
         "priority": None,
         "status": "En progreso",
-        "assignee": None,
+        "assignee": assignee,
         "requester": {
             "id": requester["id"],
             "name": "Ana Perez",
@@ -351,7 +353,7 @@ def test_sweep_modification_raw_composition():
     }
     assert '"priority":null' in status_change.text
     assert '"status":"En progreso"' in status_change.text
-    assert '"assignee":null' in status_change.text
+    assert '"assignee":' in status_change.text
 
     # Modificacion de prioridad: la respuesta completa lleva el valor vigente.
     priority_change = _put("priority", created["id"], {"priority": "Alta"})
@@ -364,7 +366,7 @@ def test_sweep_modification_raw_composition():
         "description": "Descripcion de barrido",
         "priority": "Alta",
         "status": "En progreso",
-        "assignee": None,
+        "assignee": assignee,
         "requester": {
             "id": requester["id"],
             "name": "Ana Perez",
@@ -377,7 +379,7 @@ def test_sweep_modification_raw_composition():
     assert raw_priority["sla"]["target_minutes"] == 240
     assert '"priority":"Alta"' in priority_change.text
     assert '"status":"En progreso"' in priority_change.text
-    assert '"assignee":null' in priority_change.text
+    assert '"assignee":' in priority_change.text
 
     # El registro de modificaciones no aparece en ningun cuerpo crudo.
     for response in (status_change, priority_change):
@@ -608,7 +610,8 @@ def test_sweep_queries_show_current_values_raw():
     assert rejected.status_code not in (400, 403)
     assert get_ticket_repository().count() == 2
 
-    _provision_and_login()
+    actor = _provision_and_login()
+    assignee = {"id": actor.id, "name": actor.name}
     assert (
         _put("priority", created["id"], {"priority": "Media"}).status_code == 200
     )
@@ -624,13 +627,13 @@ def test_sweep_queries_show_current_values_raw():
     by_id = {item["id"]: item for item in items}
     for item in items:
         assert set(item) == SUMMARY_FIELDS
-        assert item["assignee"] is None
+        assert item["assignee"] == assignee
     assert by_id[created["id"]]["priority"] == "Media"
     assert by_id[created["id"]]["status"] == "Resuelto"
     assert by_id[second["id"]]["priority"] is None
     assert '"priority":"Media"' in listing.text
     assert '"priority":null' in listing.text
-    assert '"assignee":null' in listing.text
+    assert '"assignee":' in listing.text
     assert '"description"' not in listing.text
     assert '"requester_id"' not in listing.text
 
@@ -640,7 +643,7 @@ def test_sweep_queries_show_current_values_raw():
     assert set(raw_detail) == DETAIL_FIELDS
     assert raw_detail["priority"] == "Media"
     assert raw_detail["status"] == "Resuelto"
-    assert raw_detail["assignee"] is None
+    assert raw_detail["assignee"] == assignee
     assert raw_detail["requester_id"] == requester["id"]
     assert '"priority":"Media"' in detail.text
 

@@ -29,7 +29,9 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ValidationError
 
 from app.modules.identity.interface.dependencies import get_current_user
+from app.modules.tickets.interface.dependencies import creatable_actor
 from app.modules.identity.interface.technicians_contract import (
+    get_technician_assignment_candidate,
     get_technician_summary,
 )
 from app.modules.identity.interface.users_contract import get_user_summary
@@ -59,7 +61,8 @@ from app.modules.tickets.application.list_all_tickets import list_all_tickets
 from app.modules.tickets.application.list_attention_tickets import (
     list_attention_tickets,
 )
-from app.modules.tickets.application.list_tickets import list_my_tickets
+from app.modules.tickets.application.list_tickets import list_visible_tickets
+from app.modules.tickets.application.notify_ticket_event import notify_ticket_event
 from app.modules.tickets.application.reopen_ticket import reopen_ticket
 from app.modules.tickets.application.set_ticket_priority import set_ticket_priority
 from app.modules.tickets.application.update_ticket_status import (
@@ -203,6 +206,8 @@ def _modifiable_ticket(
             ticket_id=ticket_id,
             actor_role=current["role"],
             tickets=get_ticket_repository(),
+            actor_company_id=current.get("company_id"),
+            actor_id=current["id"],
         )
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -226,6 +231,7 @@ def _assignable_ticket(
             ticket_id=ticket_id,
             actor_role=current["role"],
             tickets=get_ticket_repository(),
+            actor_company_id=current.get("company_id"),
         )
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -249,6 +255,7 @@ def _reopenable_ticket(
             ticket_id=ticket_id,
             actor_role=current["role"],
             tickets=get_ticket_repository(),
+            actor_company_id=current.get("company_id"),
         )
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -375,6 +382,7 @@ def _json_body(
 _priority_body = _json_body(SetPriorityRequest)
 _status_body = _json_body(SetStatusRequest)
 _assignee_body = _json_body(SetAssigneeRequest)
+_create_body = _json_body(CreateTicketRequest)
 
 
 def _json_body_documentation(schema: type[BaseModel]) -> dict[str, Any]:
@@ -391,8 +399,8 @@ def _json_body_documentation(schema: type[BaseModel]) -> dict[str, Any]:
 
 @router.post("", response_model=TicketResponse, status_code=201)
 def create_ticket_endpoint(
-    payload: CreateTicketRequest,
-    current: dict = Depends(get_current_user),
+    current: dict = Depends(creatable_actor),
+    payload: CreateTicketRequest = Depends(_create_body),
 ) -> TicketResponse:
     """Crea un ticket del usuario autenticado (201) o rechaza con 422."""
     try:
@@ -401,6 +409,7 @@ def create_ticket_endpoint(
             description=payload.description,
             requester_id=current["id"],
             tickets=get_ticket_repository(),
+            company_id=current.get("company_id"),
         )
     except TicketValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -411,9 +420,11 @@ def create_ticket_endpoint(
 def list_tickets_endpoint(
     current: dict = Depends(get_current_user),
 ) -> list[TicketSummaryResponse]:
-    """Lista los tickets propios, mas recientes primero (RF-15)."""
-    tickets = list_my_tickets(
-        requester_id=current["id"],
+    """Lista los tickets visibles para el rol y tenant de la sesión."""
+    tickets = list_visible_tickets(
+        actor_id=current["id"],
+        actor_role=current["role"],
+        actor_company_id=current.get("company_id"),
         tickets=get_ticket_repository(),
     )
     # Un unico instante de referencia para todo el listado (HU-05).
@@ -487,6 +498,7 @@ def get_ticket_endpoint(
             actor_id=current["id"],
             actor_role=current["role"],
             tickets=get_ticket_repository(),
+            actor_company_id=current.get("company_id"),
         )
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -499,8 +511,8 @@ def get_ticket_endpoint(
     openapi_extra=_json_body_documentation(SetPriorityRequest),
 )
 def set_priority_endpoint(
-    ticket: Ticket = Depends(_modifiable_ticket),
     current: dict = Depends(get_current_user),
+    ticket: Ticket = Depends(_modifiable_ticket),
     payload: SetPriorityRequest = Depends(_priority_body),
 ) -> TicketResponse:
     """Fija la prioridad de un ticket (RF-22) o rechaza con 422.
@@ -529,8 +541,8 @@ def set_priority_endpoint(
     openapi_extra=_json_body_documentation(SetStatusRequest),
 )
 def set_status_endpoint(
-    ticket: Ticket = Depends(_modifiable_ticket),
     current: dict = Depends(get_current_user),
+    ticket: Ticket = Depends(_modifiable_ticket),
     payload: SetStatusRequest = Depends(_status_body),
 ) -> TicketResponse:
     """Actualiza el estado de un ticket (HU-03 y HU-08) o rechaza con 409/422.
@@ -548,6 +560,7 @@ def set_status_endpoint(
             status=payload.status,
             actor_id=current["id"],
             modifications=get_ticket_modification_log(),
+            notify=notify_ticket_event,
         )
     except TicketValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -577,6 +590,7 @@ def reopen_ticket_endpoint(
         ticket=ticket,
         actor_id=current["id"],
         modifications=get_ticket_modification_log(),
+        notify=notify_ticket_event,
     )
     return _ticket_response(updated)
 
@@ -587,8 +601,8 @@ def reopen_ticket_endpoint(
     openapi_extra=_json_body_documentation(SetAssigneeRequest),
 )
 def set_assignee_endpoint(
-    ticket: Ticket = Depends(_assignable_ticket),
     current: dict = Depends(get_current_user),
+    ticket: Ticket = Depends(_assignable_ticket),
     payload: SetAssigneeRequest = Depends(_assignee_body),
 ) -> TicketResponse:
     """Asigna o reasigna el tecnico de un ticket (RF-32, RF-33).
@@ -601,12 +615,18 @@ def set_assignee_endpoint(
     la sesion, nunca del cuerpo (RF-38).
     """
     try:
+        candidate = get_technician_assignment_candidate(
+            str(payload.assignee_id), current.get("company_id")
+        )
+        if candidate is None:
+            raise HTTPException(status_code=404, detail="ticket not found")
         updated = assign_ticket(
             ticket=ticket,
-            technician_id=payload.assignee_id,
+            technician_id=str(payload.assignee_id),
             actor_id=current["id"],
-            resolve_technician=get_technician_summary,
+            resolve_technician=lambda technician_id: candidate,
             assignments=get_assignment_log(),
+            notify=notify_ticket_event,
         )
     except TicketValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

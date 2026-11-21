@@ -44,6 +44,7 @@ def get_reopenable_ticket(
     ticket_id: str,
     actor_role: str,
     tickets: InMemoryTicketRepository,
+    actor_company_id: str | None = None,
 ) -> Ticket:
     """Devuelve el ticket que el actor puede reabrir.
 
@@ -58,6 +59,11 @@ def get_reopenable_ticket(
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     ticket = tickets.find_by_id(ticket_id)
     if ticket is None:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
+    same_tenant = ticket.company_id == actor_company_id
+    if ticket.company_id is None and actor_company_id is None:
+        same_tenant = True
+    if not same_tenant:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     if ticket.status != CLOSED_STATUS:
         raise TicketNotClosedError(TICKET_NOT_CLOSED_MESSAGE)

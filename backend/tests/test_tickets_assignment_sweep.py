@@ -646,7 +646,7 @@ def test_sweep_tickets_assigned_to_me():
 
     first = _create_ticket(title="Primero")
     second = _create_ticket(title="Segundo")
-    foreign = tech_api.post(
+    foreign = admin_api.post(
         "/api/tickets", json={"title": "Del tecnico", "description": "Propio"}
     )
     assert foreign.status_code == 201
@@ -707,9 +707,13 @@ def test_sweep_tickets_assigned_to_me():
     assert client_listing.json()[0]["assignee"] is not None
     _login(tech_api, tech_one.email)
     tech_listing = tech_api.get("/api/tickets")
-    assert [item["id"] for item in tech_listing.json()] == [foreign_ticket["id"]]
-    assert foreign_ticket["requester_id"] == tech_one.id
-    assert requester["id"] != tech_one.id
+    assert {item["id"] for item in tech_listing.json()} == {
+        first["id"],
+        second["id"],
+        foreign_ticket["id"],
+    }
+    assert foreign_ticket["requester_id"] == admin.id
+    assert requester["id"] != admin.id
 
 
 def test_sweep_assigned_list_ties_do_not_assert_order():
@@ -753,7 +757,7 @@ def test_sweep_precedence_table_with_real_sessions():
 
     open_ticket = _create_ticket(title="Abierto")
     closed_ticket = _create_ticket(title="Cerrado")
-    foreign_ticket = tech_api.post(
+    foreign_ticket = admin_api.post(
         "/api/tickets", json={"title": "Ajeno", "description": "Del tecnico"}
     )
     assert foreign_ticket.status_code == 201
@@ -835,13 +839,14 @@ def test_sweep_precedence_table_with_real_sessions():
             422,
         ),
         ("admin-open-malformed", "admin", "open", MALFORMED_ASSIGNEE_BODY, 422),
-        # 422 uniforme del tecnico: inexistente, no UUID, cliente o admin.
+        # 404 para inexistente, 422 estructural para UUID invalido y 422
+        # de dominio para candidatos propios no elegibles.
         (
             "invalid-tech-missing",
             "admin",
             "open",
             {"assignee_id": str(uuid.uuid4())},
-            422,
+            404,
         ),
         ("invalid-tech-format", "admin", "open", {"assignee_id": "no-es-uuid"}, 422),
         ("invalid-tech-client", "admin", "open", {"assignee_id": client["id"]}, 422),
@@ -871,11 +876,15 @@ def test_sweep_precedence_table_with_real_sessions():
         elif expected == 409:
             assert response.json() == {"detail": TICKET_CLOSED_MESSAGE}, label
         else:
-            assert set(response.json()) == {"detail"}, label
-            if label.startswith(("invalid-tech", "self-assign")):
-                assert (
-                    response.json()["detail"] == INVALID_TECHNICIAN_MESSAGE
-                ), label
+                assert set(response.json()) == {"detail"}, label
+                if label.startswith(("invalid-tech", "self-assign")):
+                    if label == "invalid-tech-format":
+                        assert isinstance(response.json()["detail"], list), label
+                    else:
+                        assert (
+                            response.json()["detail"]
+                            == INVALID_TECHNICIAN_MESSAGE
+                        ), label
 
     # Camino valido: el administrador asigna un ticket que no creo y luego
     # repite el tecnico vigente (200 sin cambio ni registro).

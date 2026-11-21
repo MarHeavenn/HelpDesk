@@ -101,13 +101,50 @@ HISTORY_ACTION_COMMENT = "comment_added"
 
 # Roles con permisos de gestion sobre prioridad y estado (RF-24).
 MANAGEMENT_ROLES = frozenset({"tecnico", "administrador"})
+TICKET_READ_ROLES = frozenset({"tecnico", "supervisor", "administrador"})
+TICKET_MODIFICATION_ROLES = frozenset({"tecnico", "supervisor", "administrador"})
 
 # Roles con permiso de asignacion y reasignacion (RF-38): solo el
 # administrador; los tecnicos no asignan.
-ASSIGNMENT_ROLES = frozenset({"administrador"})
+ASSIGNMENT_ROLES = frozenset({"administrador", "supervisor"})
 
 # Roles con permiso de reapertura (HU-08, RF-77): solo el administrador.
 REOPEN_ROLES = frozenset({"administrador"})
+
+# Tipos de notificacion interna (HU-15, RF-144). Solo los eventos efectivos
+# del ticket que figuran en este catalogo generan avisos; la creacion,
+# la prioridad y los comentarios quedan fuera.
+NOTIFICATION_TYPE_ASSIGNED = "ticket_assigned"
+NOTIFICATION_TYPE_REASSIGNED = "ticket_reassigned"
+NOTIFICATION_TYPE_STATUS_CHANGED = "ticket_status_changed"
+NOTIFICATION_TYPE_RESOLVED = "ticket_resolved"
+NOTIFICATION_TYPE_REOPENED = "ticket_reopened"
+
+# Alertas de SLA (HU-16, RF-156). Se derivan del calculo de HU-05 y no
+# representan una accion de un usuario: su actor es el sistema.
+NOTIFICATION_TYPE_SLA_NEAR_DUE = "sla_near_due"
+NOTIFICATION_TYPE_SLA_BREACHED = "sla_breached"
+
+NOTIFICATION_TYPES = frozenset(
+    {
+        NOTIFICATION_TYPE_ASSIGNED,
+        NOTIFICATION_TYPE_REASSIGNED,
+        NOTIFICATION_TYPE_STATUS_CHANGED,
+        NOTIFICATION_TYPE_RESOLVED,
+        NOTIFICATION_TYPE_REOPENED,
+        NOTIFICATION_TYPE_SLA_NEAR_DUE,
+        NOTIFICATION_TYPE_SLA_BREACHED,
+    }
+)
+
+# Actor opaco de las notificaciones generadas por el sistema (HU-16). No
+# corresponde a una cuenta real: la interfaz lo traduce a un nombre visible.
+SYSTEM_ACTOR_ID = "system"
+SYSTEM_ACTOR_NAME = "Sistema"
+
+# Roles que supervisan todas las notificaciones de su empresa (HU-15,
+# RF-148). El resto solo ve las dirigidas a el.
+NOTIFICATION_VIEW_ALL_ROLES = frozenset({"administrador", "supervisor"})
 
 
 def _validate_text(raw: object, *, field: str, min_length: int, max_length: int) -> str:
@@ -242,6 +279,9 @@ class Ticket:
     # Objetivo de SLA aplicado al resolver (HU-14, RF-76). Vacio mientras
     # el ticket este activo y se limpia al reabrir.
     resolved_target_minutes: int | None = None
+    # Tenant autoritativo del ticket (HU-13). El valor por defecto conserva
+    # compatibilidad con tickets legacy no multitenant de las historias previas.
+    company_id: str | None = None
 
 
 @dataclass
@@ -327,3 +367,35 @@ class TicketHistoryEvent:
     previous_assignee_id: str | None = None
     new_assignee_id: str | None = None
     comment: str | None = None
+
+
+@dataclass
+class TicketNotification:
+    """Notificacion interna dirigida a un usuario (HU-15, RF-146).
+
+    `id` es un UUID opaco; `company_id` es el tenant del ticket y es
+    interno (no forma parte del contrato HTTP); `recipient_id` el usuario
+    destinatario; `ticket_id`/`ticket_title` la referencia legible al
+    ticket; `type` uno de los `NOTIFICATION_TYPE_*`; `actor_id` el usuario
+    que provoco el evento (o `SYSTEM_ACTOR_ID` si lo genero el sistema);
+    `previous_value`/`new_value` los valores del cambio (tecnico, estado o
+    vencimiento del SLA) cuando apliquen; `created_at` la fecha y hora UTC
+    generada por el sistema; `read_at` la marca de lectura (`None` mientras
+    no se haya leido) y `dedupe_key` la clave interna que impide repetir
+    una alerta de SLA (HU-16, RF-158), nunca expuesta por HTTP. La entidad
+    es de solo datos: el alta y el cambio de `read_at` corresponden a la
+    capa de aplicacion.
+    """
+
+    id: str
+    company_id: str | None
+    recipient_id: str
+    ticket_id: str
+    ticket_title: str
+    type: str
+    actor_id: str
+    created_at: datetime
+    previous_value: str | None = None
+    new_value: str | None = None
+    read_at: datetime | None = None
+    dedupe_key: str | None = None

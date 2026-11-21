@@ -68,24 +68,37 @@ Abre `http://localhost:5173/login` e inicia sesión con una de las cuentas demo.
 
 ### Usuarios de desarrollo
 
-`dev_server.py` crea automáticamente un administrador y un técnico, porque no existe un endpoint público para esos roles:
+`dev_server.py` crea automáticamente un administrador, un técnico y un cliente de demostración:
 
 | Rol | Correo |
 | --- | --- |
 | Administrador | `admin@helpdesk.dev` |
 | Técnico | `tecnico@helpdesk.dev` |
+| Cliente | `cliente@helpdesk.dev` |
 
 Si no se define una contraseña, se genera una aleatoria y se muestra en la consola al arrancar. Se puede fijar con variables de entorno:
+
+Si una cuenta demo ya existe en PostgreSQL, se reutiliza sin cambiar su contraseña. En ese caso, si la contraseña indicada no coincide, la consola avisa de que debe usarse la contraseña anterior.
 
 ```powershell
 $env:DEV_ADMIN_PASSWORD = "una-clave-local"
 $env:DEV_TECH_PASSWORD = "otra-clave-local"
+$env:DEV_CLIENT_PASSWORD = "clave-local-cliente"
 ..\.venv\Scripts\python.exe dev_server.py
 ```
 
-Variables disponibles: `HOST`, `PORT`, `DEV_ADMIN_NAME`, `DEV_ADMIN_EMAIL`, `DEV_ADMIN_PASSWORD`, `DEV_TECH_NAME`, `DEV_TECH_EMAIL`, `DEV_TECH_PASSWORD`.
+Variables disponibles: `HOST`, `PORT`, y `DEV_ADMIN_*`, `DEV_TECH_*`, `DEV_CLIENT_*` para `NAME`, `EMAIL` y `PASSWORD`.
 
 No se deben guardar contraseñas reales en el repositorio.
+
+### Ver alertas de SLA
+
+1. Inicia el backend con `dev_server.py` y el frontend con `npm run dev` como se indica arriba. Usa el Python del entorno virtual disponible (por ejemplo, `backend\.venv\Scripts\python.exe` desde la raíz).
+2. Abre <http://localhost:5173/login> e inicia sesión como administrador o técnico con la contraseña configurada o impresa al arrancar.
+3. Abre la campana o la página **Notificaciones**. La semilla incluye un ticket próximo al vencimiento y otro vencido; verás alertas del sistema para los responsables. El ticket próximo a vencer pasa a incumplido con el tiempo.
+4. Repite la consulta: no se generan duplicados para el mismo destinatario, tipo y vencimiento. Puedes marcar tus avisos como leídos.
+
+La generación ocurre al consultar notificaciones y el frontend actualiza mediante sondeo cada 30 segundos. En modo memoria los datos se pierden al detener el backend.
 
 ### Smoke manual de tickets
 
@@ -99,6 +112,39 @@ cd backend
 Cada comprobación se imprime como `OK`; el proceso termina con código 0 si todo pasa y 1 si algo falla. Los datos viven en memoria y desaparecen al terminar. Variables opcionales: `SMOKE_HOST` y `SMOKE_PORT`.
 
 > **Persistencia en memoria:** al detener el servidor se pierden los tickets y los usuarios registrados. Los usuarios demo se recrean en cada arranque. PostgreSQL todavía no está conectado.
+
+### Semilla del administrador de plataforma
+
+La cuenta con rol `administrador` y sin empresa —la que gestiona el catálogo completo de empresas clientes— no se crea desde la interfaz ni desde la API: se aprovisiona con una semilla idempotente que se ejecuta fuera de la aplicación (RO-01). Requiere las migraciones aplicadas y no guarda credenciales en el repositorio.
+
+```powershell
+cd backend
+$env:PLATFORM_ADMIN_EMAIL = "plataforma@example.com"
+$env:PLATFORM_ADMIN_NAME = "Administración de plataforma"
+$env:PLATFORM_ADMIN_PASSWORD = "una-clave-de-operacion"
+..\.venv\Scripts\python.exe scripts\seed_platform_admin.py
+```
+
+- Ejecutarla dos veces no crea cuentas adicionales ni cambia datos existentes.
+- Con la cuenta ya `active` y aceptada no hace nada; si está `deactivated` la reactiva conservando el hash.
+- Con la cuenta pendiente de invitación, con otro rol o con empresa falla sin modificarla e informa del motivo.
+- `PLATFORM_ADMIN_NAME` y `PLATFORM_ADMIN_PASSWORD` solo son obligatorias cuando hay que crear la cuenta; el correo lo es siempre. La contraseña se guarda únicamente como hash Argon2id.
+- La salida nunca muestra la contraseña, el hash, el token ni el enlace de invitación. Termina con código 0 si tiene éxito y 1 si falla.
+
+### Entrega de correo de invitaciones (requisito de operación)
+
+La entrega de las invitaciones (alta con administrador inicial, invitación o reenvío del administrador de empresa y operaciones de invitación de HU-13) necesita un servicio de correo configurado fuera de la aplicación (RO-02). Variables opcionales:
+
+| Variable | Uso |
+| --- | --- |
+| `SMTP_HOST` | Servidor SMTP. Sin él no se intenta el envío. |
+| `SMTP_PORT` | Puerto (por defecto `587`). |
+| `SMTP_USE_TLS` | `true` (por defecto) para STARTTLS. |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | Credenciales si el servidor las exige. |
+| `SMTP_FROM` | Remitente (por defecto `no-reply@helpdesk.local`). |
+| `INVITATION_BASE_URL` | Base del enlace de aceptación (por defecto `http://localhost:5173`). |
+
+Sin `SMTP_HOST` la cuenta y la invitación se crean o rotan igual, el código de éxito no cambia y la respuesta informa `email_status: "not-attempted"`; el acceso no se habilita hasta aceptar la invitación y se reintenta con la misma operación cuando el servicio esté configurado. Si la entrega falla se informa `email_status: "failed"` y la cuenta permanece `active`/`pending`. El token y el enlace solo viajan en el correo entregado: nunca aparecen en una respuesta HTTP, en la interfaz ni en la salida de los scripts.
 
 ## Flujo de ramas y entrega
 

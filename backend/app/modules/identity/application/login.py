@@ -72,6 +72,8 @@ def login_user(
     user = users.find_by_email(clean_email)
     if user is None:
         raise InvalidCredentialsError(INVALID_CREDENTIALS_MESSAGE)
+    if user.status != "active" or user.invitation_status != "accepted" or not user.password_hash:
+        raise InvalidCredentialsError(INVALID_CREDENTIALS_MESSAGE)
     if not (hasher or Argon2PasswordHasher()).verify(
         user.password_hash, clean_password
     ):

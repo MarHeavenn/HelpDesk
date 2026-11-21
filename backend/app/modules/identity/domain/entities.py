@@ -13,8 +13,8 @@ Reglas:
 - Nombre: obligatorio, 2-100 caracteres tras trim.
 """
 
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Optional
 
 NAME_MIN_LENGTH = 2
@@ -58,6 +58,10 @@ def validate_password(raw: str) -> str:
     return raw
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 @dataclass
 class User:
     """Usuario con email ya normalizado y contrasena solo como hash."""
@@ -65,8 +69,21 @@ class User:
     id: str
     name: str
     email: str
-    password_hash: str
+    password_hash: Optional[str]
     role: str
+    company_id: Optional[str] = None
+    phone: Optional[str] = None
+    status: str = "active"
+    invitation_status: str = "accepted"
+    invitation_token_hash: Optional[str] = None
+    invitation_expires_at: Optional[datetime] = None
+    invitation_used_at: Optional[datetime] = None
+    # The clear token exists only in the process while an invitation is sent;
+    # it is never part of an HTTP representation or persisted credential.
+    invitation_token: Optional[str] = None
+    # Fecha de alta de la cuenta (HU-19, RF-141): ordena las administradoras
+    # de una empresa. Se genera en el sistema y no es editable.
+    created_at: datetime = field(default_factory=_utc_now)
 
 
 @dataclass

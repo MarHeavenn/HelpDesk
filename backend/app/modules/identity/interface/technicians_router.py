@@ -31,9 +31,13 @@ def list_technicians_endpoint(
     permiso (cliente o tecnico) recibe 404 uniforme con el mismo mensaje
     del contrato, sin revelar ningun dato del directorio (RF-31).
     """
+    if current.get("company_id") is None:
+        raise HTTPException(status_code=404, detail="technicians not found")
     try:
         technicians = list_technicians(
-            actor_role=current["role"], users=get_user_repository()
+            actor_role=current["role"],
+            users=get_user_repository(),
+            company_id=current["company_id"],
         )
     except TechniciansAccessDeniedError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

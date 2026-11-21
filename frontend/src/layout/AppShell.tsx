@@ -9,6 +9,7 @@ import {
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 
+import type { NotificationsApi } from '@/api/notifications.api'
 import { useAuth } from '@/context/AuthContext'
 import { strings } from '@/lib/strings'
 import MobileSidebar from '@/layout/MobileSidebar'
@@ -21,7 +22,13 @@ const DESKTOP_QUERY = '(min-width: 1024px)'
  * Armazón compartido de las rutas protegidas (RF-70, RF-72, RF-74, RF-79).
  * Acepta `children` para pruebas y composición; sin ellos renderiza el Outlet.
  */
-export default function AppShell({ children }: { children?: ReactNode }) {
+export default function AppShell({
+  children,
+  notificationsApi,
+}: {
+  children?: ReactNode
+  notificationsApi?: NotificationsApi
+}) {
   const { user, status, logout, refresh } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -98,6 +105,7 @@ export default function AppShell({ children }: { children?: ReactNode }) {
             menuOpen={mobileOpen}
             menuControls={drawerId}
             menuButtonRef={menuButtonRef}
+            notificationsApi={notificationsApi}
           />
 
           <main

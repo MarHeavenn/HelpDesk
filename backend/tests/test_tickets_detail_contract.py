@@ -342,12 +342,17 @@ def test_full_ticket_composition_is_identical_across_operations():
         assert body["resolved_at"] is None
         assert body["priority"] == "Baja"
 
-    # Cada respuesta refleja el estado vigente en el momento en que se
-    # produjo: la asignacion es posterior al cambio de estado.
+    # El técnico solo puede modificar un ticket que ya tiene asignado.
     assert priority.json()["status"] == "Abierto"
-    assert priority.json()["assignee"] is None
+    assert priority.json()["assignee"] == {
+        "id": technician["id"],
+        "name": "Tecnico Uno",
+    }
     assert status.json()["status"] == "En progreso"
-    assert status.json()["assignee"] is None
+    assert status.json()["assignee"] == {
+        "id": technician["id"],
+        "name": "Tecnico Uno",
+    }
     for response in (assignment, detail):
         assert response.json()["status"] == "En progreso"
         assert response.json()["assignee"] == {

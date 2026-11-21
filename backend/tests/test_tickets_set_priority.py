@@ -355,7 +355,10 @@ def test_put_priority_by_management_role_returns_full_updated_ticket(role):
     assert body["description"] == "Descripcion"
     assert body["priority"] == "Alta"
     assert body["status"] == OPEN_STATUS
-    assert body["assignee"] is None
+    if role == "tecnico":
+        assert body["assignee"] == {"id": actor.id, "name": actor.name}
+    else:
+        assert body["assignee"] is None
     assert body["created_at"] == created["created_at"]
     assert body["requester_id"] == requester["id"]
     # El registro no aparece en la respuesta (RF-26).

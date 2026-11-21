@@ -192,20 +192,14 @@ def test_assignment_and_reassignment_events_keep_technician_previous_and_new():
 
     assert [event["action"] for event in events] == [
         "ticket_created",
-        "technician_assigned",
         "technician_reassigned",
     ]
     assert events[1]["actor"] == {"id": admin["id"], "name": admin["name"]}
-    assert events[1]["previous_assignee"] is None
+    assert events[1]["previous_assignee"] == {
+        "id": tech_one["id"],
+        "name": tech_one["name"],
+    }
     assert events[1]["new_assignee"] == {
-        "id": tech_one["id"],
-        "name": tech_one["name"],
-    }
-    assert events[2]["previous_assignee"] == {
-        "id": tech_one["id"],
-        "name": tech_one["name"],
-    }
-    assert events[2]["new_assignee"] == {
         "id": tech_two["id"],
         "name": tech_two["name"],
     }

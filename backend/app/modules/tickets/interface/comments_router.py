@@ -65,6 +65,7 @@ def _commentable_ticket(
             actor_id=current["id"],
             actor_role=current["role"],
             tickets=get_ticket_repository(),
+            actor_company_id=current.get("company_id"),
         )
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -144,9 +145,10 @@ def list_comments_endpoint(
         comments = list_comments(
             ticket_id=ticket_id,
             actor_id=current["id"],
-            actor_role=current["role"],
-            tickets=get_ticket_repository(),
-            comments=get_ticket_comment_repository(),
+        actor_role=current["role"],
+        tickets=get_ticket_repository(),
+        comments=get_ticket_comment_repository(),
+        actor_company_id=current.get("company_id"),
         )
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -1,7 +1,7 @@
 # Constitución del proyecto Help Desk SaaS
 
 1. Mantener el stack y la arquitectura acordados (React + TypeScript, FastAPI, PostgreSQL, monolito modular), salvo aprobación del equipo.
-2. Respetar la separación de responsabilidades entre módulos (`identity`, `tickets`, `assignment`, `sla`) y entre capas (`domain`, `application`, `infrastructure`, `interface`).
+2. Respetar la separación de responsabilidades entre módulos (`identity`, `tickets`, `assignment`, `sla`, `companies`) y entre capas (`domain`, `application`, `infrastructure`, `interface`). `companies` es dueño del catálogo de empresas clientes y de sus datos de contacto y estado; `identity` sigue siendo dueño de las cuentas y de las invitaciones, y `tickets` de los tickets; un módulo nunca accede a las tablas internas de otro y toda relación entre ellos pasa únicamente por los contratos `interface/*_contract.py`.
 3. Mantener las reglas de negocio fuera de los controladores HTTP y de la interfaz; la interfaz solo comunica, no decide.
 4. Definir requisitos y criterios de aceptación antes de implementar funcionalidades.
 5. Verificar los cambios mediante pruebas o comprobaciones apropiadas; no afirmar verificaciones no realizadas.

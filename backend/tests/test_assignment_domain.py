@@ -182,9 +182,9 @@ def test_ticket_assignment_does_not_change_creation_data_or_requester():
 # --- RF-38: roles con permiso de asignacion ---
 
 
-def test_assignment_roles_are_exactly_the_administrator():
+def test_assignment_roles_include_administrator_and_supervisor():
     assert isinstance(ASSIGNMENT_ROLES, frozenset)
-    assert ASSIGNMENT_ROLES == frozenset({"administrador"})
+    assert ASSIGNMENT_ROLES == frozenset({"administrador", "supervisor"})
     assert "administrador" in ASSIGNMENT_ROLES
 
 

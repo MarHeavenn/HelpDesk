@@ -4,8 +4,14 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '@/api/httpClient'
-import { useSlaDashboard, useTicketsDashboard } from '@/hooks/useDashboard'
 import {
+  dashboardKeys,
+  useAttentionAlerts,
+  useSlaDashboard,
+  useTicketsDashboard,
+} from '@/hooks/useDashboard'
+import {
+  buildAttentionTickets,
   buildSlaDashboard,
   buildTicketDashboard,
   createDashboardApi,
@@ -82,6 +88,21 @@ describe('useDashboard', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(getTickets).toHaveBeenCalledTimes(1)
+  })
+
+  it('expone los tickets que requieren atención sin reintentos', async () => {
+    const payload = buildAttentionTickets()
+    const getAttention = vi.fn(async () => payload)
+    const api = createDashboardApi({ getAttention })
+
+    const { result } = renderHook(() => useAttentionAlerts(api), {
+      wrapper: wrapper(createClient()),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(payload)
+    expect(getAttention).toHaveBeenCalledTimes(1)
+    expect(dashboardKeys.attention).toEqual(['dashboard', 'attention'])
   })
 
   it('consulta el SLA con el periodo recibido', async () => {

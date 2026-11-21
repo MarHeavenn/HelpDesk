@@ -52,6 +52,9 @@ describe('TicketDetailModal', () => {
     ).toBeVisible()
     expect(within(dialog).getByText('Objetivo: 12 horas')).toBeVisible()
     expect(within(dialog).getByText('Restan 660 min')).toBeVisible()
+    expect(
+      within(dialog).getByText('En tiempo').closest('[data-level]'),
+    ).toHaveAttribute('data-level', 'normal')
     expect(within(dialog).getByText('Estamos revisando el caso.')).toBeVisible()
     expect(within(dialog).getByText('Acciones')).toBeVisible()
     expect(within(dialog).getByLabelText('Cambiar estado')).toBeVisible()

@@ -1,37 +1,19 @@
 import { PriorityBadge, StatusBadge } from '@/components/ui/Badges'
+import SlaSignal from '@/components/ui/SlaSignal'
 import { formatTicketDate } from '@/lib/dates'
 import { friendlyTicketId } from '@/lib/format'
 import { strings } from '@/lib/strings'
-import type { TicketSla, TicketSummary } from '@/types/ticket'
+import type { TicketSummary } from '@/types/ticket'
 
-const SLA_STYLES: Record<string, string> = {
-  en_tiempo: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  en_riesgo: 'bg-amber-50 text-amber-700 ring-amber-200',
-  cumplido: 'bg-sky-50 text-sky-700 ring-sky-200',
-  incumplido: 'bg-red-50 text-red-700 ring-red-200',
-}
-
-function slaLabel(sla: TicketSla): string {
-  const known = strings.tickets.slaStatus
-  return (known as Record<string, string>)[sla.status] ?? sla.status
-}
-
-function SlaCell({ sla }: { sla: TicketSla | null }) {
-  if (!sla) {
-    return <span className="text-slate-400">{strings.tickets.noSla}</span>
-  }
+function SlaCell({ sla }: { sla: TicketSummary['sla'] }) {
   return (
     <div className="space-y-0.5">
-      <span
-        className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-          SLA_STYLES[sla.status] ?? 'bg-slate-100 text-slate-600 ring-slate-200'
-        }`}
-      >
-        {slaLabel(sla)}
-      </span>
-      <p className="whitespace-nowrap text-xs text-slate-500">
-        {strings.tickets.detail.due}: {formatTicketDate(sla.due_at)}
-      </p>
+      <SlaSignal sla={sla} />
+      {sla ? (
+        <p className="whitespace-nowrap text-xs text-slate-500">
+          {strings.tickets.detail.due}: {formatTicketDate(sla.due_at)}
+        </p>
+      ) : null}
     </div>
   )
 }

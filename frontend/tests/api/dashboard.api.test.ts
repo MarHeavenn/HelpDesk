@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createDashboardApi, type RequestFn } from '@/api/dashboard.api'
 import { ApiError } from '@/api/httpClient'
 import {
+  buildAttentionTickets,
   buildSlaDashboard,
   buildTicketDashboard,
 } from '../helpers/dashboardFixtures'
@@ -28,6 +29,15 @@ describe('dashboard.api', () => {
 
     await expect(api.getSla(7)).resolves.toBe(payload)
     expect(http).toHaveBeenCalledWith('/api/dashboard/sla?days=7')
+  })
+
+  it('consulta los tickets que requieren atención en el contrato de HU-10', async () => {
+    const payload = buildAttentionTickets()
+    const http = vi.fn(async () => payload) as unknown as RequestFn
+    const api = createDashboardApi(http)
+
+    await expect(api.getAttention()).resolves.toBe(payload)
+    expect(http).toHaveBeenCalledWith('/api/tickets/requiring-attention')
   })
 
   it('propaga el 401 tipado del cliente HTTP', async () => {

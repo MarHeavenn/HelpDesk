@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+import AlertsPanel from '@/components/dashboard/AlertsPanel'
 import AssigneeCard from '@/components/dashboard/AssigneeCard'
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton'
 import DistributionCard from '@/components/dashboard/DistributionCard'
@@ -15,7 +16,7 @@ import type { DashboardApi } from '@/api/dashboard.api'
 import { ApiError } from '@/api/httpClient'
 import type { NotificationsApi } from '@/api/notifications.api'
 import { useAuth } from '@/context/AuthContext'
-import { useTicketsDashboard } from '@/hooks/useDashboard'
+import { useAttentionAlerts, useTicketsDashboard } from '@/hooks/useDashboard'
 import { formatLongDate, greetingForHour } from '@/lib/dates'
 import { strings } from '@/lib/strings'
 
@@ -30,6 +31,10 @@ export default function DashboardPage({
   const { user, logout } = useAuth()
   const query = useTicketsDashboard(api)
   const dashboard = query.data
+  const isStaff =
+    user?.role === 'administrador' || user?.role === 'tecnico'
+  const attention = useAttentionAlerts(api, isStaff)
+  const attentionCount = attention.data?.length ?? 0
 
   const unauthorized =
     query.error instanceof ApiError && query.error.status === 401
@@ -101,6 +106,16 @@ export default function DashboardPage({
                       (item) => item.status === 'Abierto',
                     )?.count ?? 0
                   }
+                  hint={
+                    attentionCount > 0
+                      ? {
+                          text: strings.dashboard.alerts.countHint(
+                            attentionCount,
+                          ),
+                          tone: 'warning',
+                        }
+                      : undefined
+                  }
                 />
                 <KpiCard
                   label={strings.dashboard.kpis.attention}
@@ -152,6 +167,7 @@ export default function DashboardPage({
             </>
           ) : null}
 
+          <AlertsPanel api={api} />
           <NotificationsCard api={notificationsApi} />
         </div>
       ) : null}

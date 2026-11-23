@@ -158,6 +158,14 @@ necesita la variable `HELPDESK_ALLOW_IN_MEMORY`.
 
 No se declara una prueba como superada sin evidencia de su ejecución.
 
+## CI/CD
+
+GitHub Actions ejecuta calidad (backend y frontend) en PRs/pushes a `develop` y
+`main`, publica dos imágenes en GHCR al hacer push a `main` y despliega en un VPS
+mediante `workflow_run` + SSH. La configuración de secretos, el environment
+`production`, el compose de producción y el procedimiento de rollback están en
+[`docs/ci-cd.md`](docs/ci-cd.md).
+
 ## Limitaciones conocidas
 
 - El entorno de demostración es **local**: no hay despliegue en nube ni servidor

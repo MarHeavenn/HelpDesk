@@ -51,9 +51,13 @@ Detalle en las secciones 3.3 y 4 del documento general.
 - HU-16 (notificaciones de SLA): ver `specs/features/HU-16-sla-breach-notifications/` (implementación en validación; RF-156 a RF-164).
 - HU-11 (dashboard de tickets): ver `specs/features/HU-11-tickets-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-81 a RF-92).
 - HU-12 (dashboard de cumplimiento de SLA): ver `specs/features/HU-12-sla-dashboard/` (spec, plan y tareas aprobadas; en implementación; RF-93 a RF-104).
-- HU-20 (frontend del MVP): ver `specs/features/HU-20-frontend/` (spec, plan y tareas aprobadas; sin código).
+- HU-20 (frontend del MVP): ver `specs/frontend-mvp/` (spec, plan y tareas aprobados).
 - HU-21 (estructura visual y navegación): ver `specs/features/HU-21-frontend-shell/` (spec, plan y tareas aprobadas; RF-69 a RF-80).
 - HU-24 (paneles visuales y componentes de alertas): ver
   `specs/features/HU-24-visual-panels-alerts/` (implementada y validada; RF-124 a
   RF-132). Señal de SLA reutilizable, panel de alertas y KPI con cifra real.
+- HU-26 (validación integral y despliegue del MVP): ver
+  `specs/features/HU-26-mvp-validation/` (spec, plan y tareas aprobados; RF-165 a
+  RF-172). Antes HU-20-mvp-validation; despliegue local con Docker y validación
+  del flujo completo más los módulos nuevos.
 - HU-17 y HU-18: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

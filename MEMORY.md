@@ -30,7 +30,8 @@
   `helpdesk-backend`/`helpdesk-frontend`), `deploy.yml` (`workflow_run` + SSH al
   environment `production`) y `deploy/compose.production.yml`. Spec/plan/tareas
   en `specs/features/CI-CD-github/`. YAML validado. PR #29 abrió el run de CI
-  `45263461824` (setup/checkout en verde; tests en curso al consultarlo).
+  `45263461824` **en verde**: backend y frontend OK (tests + docker build);
+  `Publish Docker images` skipped en PR, correcto según su condición.
 - R1–R9 (HU-19): `extra="forbid"`, unicidad de correo, `companies` solo por
   contrato, decisión de rama/409 en application, SLA inmutable en PATCH,
   tolerancia de heredados, redirect `/empresas` y sin código muerto.

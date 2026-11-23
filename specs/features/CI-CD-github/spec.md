@@ -74,10 +74,11 @@ Los cuatro archivos YAML se validaron con `yaml.safe_load` sin errores.
 
 **Evidencia en GitHub:** PR #29 (`feature/CI-CD-github` → `develop`) disparó el
 run de CI `45263461824` (https://github.com/MarHeavenn/HelpDesk/actions/runs/45263461824).
-En la consulta inicial ambos jobs estaban `in_progress`; los pasos de checkout y
-setup de Python/Node ya habían terminado `success`, lo que confirma que el YAML y
-las versiones de acciones son válidos. El resultado final debe verificarse en
-Actions antes de dar por cerrada la historia.
+El run terminó con **`conclusion: success`**: `Backend quality gates` y
+`Frontend quality gates` en verde (incluidos `Tests` y `Verify Docker image can
+be built` en ambos), y `Publish Docker images` en `skipped` por su condición de
+push a `main`. Esto confirma en GitHub el YAML, las versiones de acciones y los
+comandos de calidad.
 
 **Veredicto: infraestructura lista y CI ejecutándose en GitHub; publicación y
 Deploy pendientes de push a `main` y de la configuración del VPS/environment por

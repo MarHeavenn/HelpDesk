@@ -60,4 +60,7 @@ Detalle en las secciones 3.3 y 4 del documento general.
   `specs/features/HU-26-mvp-validation/` (spec, plan y tareas aprobados; RF-165 a
   RF-172). Antes HU-20-mvp-validation; despliegue local con Docker y validación
   del flujo completo más los módulos nuevos.
+- CI/CD (ejercicios de la clase 10, no tarjeta Trello): ver
+  `specs/features/CI-CD-github/` y `docs/ci-cd.md`. Workflows de GitHub Actions,
+  publicación en GHCR y despliegue en VPS preparados; ejecución real pendiente.
 - HU-17 y HU-18: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.

@@ -40,6 +40,11 @@ from app.modules.identity.infrastructure.user_repository import (
 
 PASSWORD = "Demo12345"
 
+# El registro publico (HU-01) deja la cuenta sin empresa; HU-13/HU-19 exigen
+# company_id para crear tickets. El smoke asigna una empresa de prueba a todas
+# las cuentas para poder recorrer el flujo completo sin depender de HU-19.
+SMOKE_COMPANY = "company-smoke"
+
 ADMIN = {"name": "Ana Admin", "email": "admin@smoke.dev", "role": "administrador"}
 TECH_ONE = {
     "name": "Tomas Tecnico",
@@ -155,13 +160,22 @@ def _free_port() -> int:
 def _seed_users() -> None:
     users = get_user_repository()
     for user in (ADMIN, TECH_ONE, TECH_TWO):
-        provision_user(
+        seeded = provision_user(
             name=user["name"],
             email=user["email"],
             password=PASSWORD,
             role=user["role"],
             users=users,
         )
+        seeded.company_id = SMOKE_COMPANY
+
+
+def _attach_smoke_company(email: str) -> None:
+    """Asocia la empresa de prueba a una cuenta creada por registro publico."""
+    user = get_user_repository().find_by_email(email)
+    if user is None:
+        raise SmokeError(f"no existe la cuenta de smoke {email}")
+    user.company_id = SMOKE_COMPANY
 
 
 def _start_server(host: str, port: int) -> uvicorn.Server:
@@ -244,6 +258,7 @@ def run(base_url: str, smoke: Smoke) -> None:
         registered.get("role") == "cliente",
         str(registered),
     )
+    _attach_smoke_company(CLIENT["email"])
     smoke.status(
         "Segundo cliente se registra",
         other.request(
@@ -258,6 +273,7 @@ def run(base_url: str, smoke: Smoke) -> None:
         ),
         201,
     )
+    _attach_smoke_company(OTHER_CLIENT["email"])
     client_user = _login(smoke, client, "Cliente", CLIENT["email"])
 
     created = smoke.status(
@@ -403,50 +419,30 @@ def run(base_url: str, smoke: Smoke) -> None:
         200,
     )
 
-    prioritized = smoke.status(
-        "Tecnico fija la prioridad Alta",
+    smoke.status(
+        "Tecnico sin asignacion no fija prioridad",
         tech.request(
             "PUT", f"/api/tickets/{ticket_id}/priority", {"priority": "Alta"}
         ),
-        200,
+        404,
     )
-    smoke.check(
-        "El SLA se calcula con el objetivo de 240 minutos",
-        prioritized.get("priority") == "Alta"
-        and prioritized.get("sla", {}).get("target_minutes") == 240,
-        str(prioritized),
-    )
-
-    in_progress = smoke.status(
-        "Tecnico cambia el estado a En progreso",
+    smoke.status(
+        "Tecnico sin asignacion no cambia el estado",
         tech.request(
             "PUT",
             f"/api/tickets/{ticket_id}/status",
             {"status": "En progreso"},
         ),
-        200,
+        404,
     )
-    smoke.check(
-        "El ticket sigue sin resolved_at",
-        in_progress.get("status") == "En progreso"
-        and in_progress.get("resolved_at") is None,
-        str(in_progress),
-    )
-
-    commented = smoke.status(
-        "Tecnico deja seguimiento",
+    smoke.status(
+        "Tecnico sin asignacion no comenta",
         tech.request(
             "POST",
             f"/api/tickets/{ticket_id}/comments",
-            {"body": "  Revisando el caso.  "},
+            {"body": "Hola"},
         ),
-        201,
-    )
-    smoke.check(
-        "El comentario se recorta y registra al autor",
-        commented.get("body") == "Revisando el caso."
-        and commented.get("author", {}).get("id") == tech_user.get("id"),
-        str(commented),
+        404,
     )
     smoke.status(
         "Tecnico no asigna tecnico",
@@ -462,7 +458,13 @@ def run(base_url: str, smoke: Smoke) -> None:
         tech.request("GET", "/api/tickets"),
         200,
     )
-    smoke.check("El tecnico no creo tickets", tech_mine == [], str(tech_mine))
+    # HU-13/RF-115: el tecnico lee cualquier ticket de su empresa en el
+    # listado principal, aunque solo puede modificar los asignados.
+    smoke.check(
+        "El tecnico ve el ticket de su empresa en el listado",
+        [ticket["id"] for ticket in tech_mine] == [ticket_id],
+        str(tech_mine),
+    )
 
     admin = Session("administrador", base_url)
     print("\n[Administrador]")
@@ -473,9 +475,11 @@ def run(base_url: str, smoke: Smoke) -> None:
         admin.request("GET", "/api/tickets"),
         200,
     )
+    # HU-13/RF-113: el administrador ve todos los tickets de su empresa
+    # tambien en el listado principal.
     smoke.check(
-        "El listado propio del admin no es el global",
-        admin_mine == [],
+        "El administrador ve el ticket de su empresa en el listado",
+        [ticket["id"] for ticket in admin_mine] == [ticket_id],
         str(admin_mine),
     )
     technicians = smoke.status(
@@ -519,6 +523,52 @@ def run(base_url: str, smoke: Smoke) -> None:
         "Mis tickets del tecnico contiene el ticket",
         [ticket["id"] for ticket in tech_assigned] == [ticket_id],
         str(tech_assigned),
+    )
+
+    prioritized = smoke.status(
+        "Tecnico asignado fija la prioridad Alta",
+        tech.request(
+            "PUT", f"/api/tickets/{ticket_id}/priority", {"priority": "Alta"}
+        ),
+        200,
+    )
+    smoke.check(
+        "El SLA se calcula con el objetivo de 240 minutos",
+        prioritized.get("priority") == "Alta"
+        and prioritized.get("sla", {}).get("target_minutes") == 240,
+        str(prioritized),
+    )
+
+    in_progress = smoke.status(
+        "Tecnico asignado cambia el estado a En progreso",
+        tech.request(
+            "PUT",
+            f"/api/tickets/{ticket_id}/status",
+            {"status": "En progreso"},
+        ),
+        200,
+    )
+    smoke.check(
+        "El ticket sigue sin resolved_at",
+        in_progress.get("status") == "En progreso"
+        and in_progress.get("resolved_at") is None,
+        str(in_progress),
+    )
+
+    commented = smoke.status(
+        "Tecnico asignado deja seguimiento",
+        tech.request(
+            "POST",
+            f"/api/tickets/{ticket_id}/comments",
+            {"body": "  Revisando el caso.  "},
+        ),
+        201,
+    )
+    smoke.check(
+        "El comentario se recorta y registra al autor",
+        commented.get("body") == "Revisando el caso."
+        and commented.get("author", {}).get("id") == tech_user.get("id"),
+        str(commented),
     )
 
     reassigned = smoke.status(

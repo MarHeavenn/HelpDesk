@@ -7,8 +7,13 @@
   PostgreSQL Docker (TSK-025).
 - `companies` es el quinto módulo (HU-19, RF-125–RF-143): catálogo de empresas,
   contacto, estado e invitación/reenvío del administrador; `/empresas` real.
-- En `feature/HU-20-tickets-frontend`: HU-22/HU-23 commiteadas; HU-24
-  commiteada y con **PR #27 abierto contra `develop`**.
+- HU-22/HU-23/HU-24 ya mergeadas en `develop` (PR #27). En
+  `feature/HU-26-mvp-validation`: spec renombrada de HU-20-mvp-validation y
+  renumerada a RF-165..RF-172; infra local creada (Dockerfiles + compose + nginx).
+- HU-26 validada salvo el despliegue: suites verde y smoke 93/93; dos defectos
+  de pruebas/smoke corregidos (test_dev_server_seed.py y smoke_manual.py) por
+  cambios de HU-13/HU-19. Sin daemon de Docker no se ejecutaron CP-13/14/16:
+  no afirmar que el MVP está arrancado.
 - HU-23: `/tickets` y `/mis-tickets` sobre `TicketListPage`; filtros, orden y
   paginación en cliente con la URL como fuente de verdad; `GET /api/tickets/all`.
 - HU-22: detalle en modal accesible con prioridad, estado, asignación y
@@ -18,8 +23,8 @@
   `recent_tickets` no trae `sla`; campana sin contador (decisión del usuario).
   Spec, plan, tareas y validación RF por RF en
   `specs/features/HU-24-visual-panels-alerts/`.
-- Suites: backend 1536 passed + 39 skipped en memoria; frontend tras integrar
-  `develop` **34 archivos / 236 pruebas** en verde, `lint` y `build` correctos.
+- Suites: backend **1574 passed / 40 skipped** en memoria; frontend **34
+  archivos / 236 pruebas**; `lint` y `build` correctos; smoke 93 comprobaciones.
 - R1–R9 (HU-19): `extra="forbid"`, unicidad de correo, `companies` solo por
   contrato, decisión de rama/409 en application, SLA inmutable en PATCH,
   tolerancia de heredados, redirect `/empresas` y sin código muerto.
@@ -68,11 +73,15 @@
 - Vitest sin `globals`: `cleanup()` de RTL en `tests/setup.ts` y API falsa o
   `fetch` stubeado (incluidas las vistas que consultan la API real).
 - Las pruebas de migración no asumen que una versión concreta sea la última.
+- Sin daemon de Docker no hay CP-13/14/16: validar compose con `docker-compose
+  config -q` pero no afirmar arranque. `docker compose` v2 no está instalado.
+- `smoke_manual.py` sin PostgreSQL necesita `HELPDESK_ALLOW_IN_MEMORY=1`; sus
+  cuentas se siembran con `company_id` porque el registro público no lo asigna.
 
 ## Próximos pasos
 
-- Revisar/fusionar el PR #27 de HU-24 contra `develop` (tras resolver los
-  conflictos de integración) y su revisión visual en 360/768/1024/1440 px.
+- HU-26: ejecutar CP-13/14/16 en un equipo con daemon de Docker y completar la
+  spec a «implementada»; revisión visual pendiente de HU-21/HU-24.
 - Completar validación HU-16 RF por RF y revisión visual como técnico; no
   afirmar cierre hasta verificar criterios y actualizar sus documentos.
 - Base aislada de pruebas Docker `helpdesk_hu16_validation_20261117`: no

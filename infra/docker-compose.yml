@@ -1,3 +1,7 @@
+version: '2.4'
+
+# MVP local (HU-26): PostgreSQL + API + frontend en una sola red.
+# Copia .env.example a infra/.env y define POSTGRES_PASSWORD antes de arrancar.
 services:
   db:
     image: postgres:16
@@ -7,15 +11,61 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en infra/.env}
       POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-55432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helpdesk} -d ${POSTGRES_DB:-helpdesk}"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 5s
+
+  api:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-helpdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en infra/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
+      FRONTEND_ORIGINS: http://localhost:${FRONTEND_PORT:-8080}
+      DEV_ADMIN_PASSWORD: ${DEV_ADMIN_PASSWORD:-Demo12345}
+      DEV_TECH_PASSWORD: ${DEV_TECH_PASSWORD:-Demo12345}
+      DEV_CLIENT_PASSWORD: ${DEV_CLIENT_PASSWORD:-Demo12345}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_URL: http://localhost:${BACKEND_PORT:-8000}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   pgdata:

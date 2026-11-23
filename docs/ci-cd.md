@@ -1,164 +1,124 @@
-# CI/CD en GitHub (HelpDesk)
+# CI/CD en GitHub + despliegue en Render
 
 Basado en los ejercicios `Ejercicio_CI.pdf` y `Ejercicio_CD.pdf` de la carpeta
-`Proceso`. No añade funcionalidad al MVP: automatiza lo que ya se ejecuta en
-local.
+`Proceso`. La diferencia es el destino del CD: **no hay VPS**; todo se despliega
+en el plan gratuito de Render, pensado para una demo de **20 días como máximo**.
 
 ## Archivos
 
 | Archivo | Función |
 |---|---|
-| `.github/workflows/ci.yml` | Quality gates de backend y frontend + publicación en GHCR |
-| `.github/workflows/deploy.yml` | Despliegue en el VPS tras CI exitosa en `main` |
-| `deploy/compose.production.yml` | Compose de producción (solo `image:`) |
+| `.github/workflows/ci.yml` | Quality gates y publicación en GHCR |
+| `.github/workflows/deploy.yml` | Despliegue en Render tras CI exitosa en `main` |
+| `render.yaml` | Blueprint: Web Service + Static Site + Postgres (plan `free`) |
 | `backend/.dockerignore`, `frontend/.dockerignore` | Contextos de build limpios |
 
-## 1. CI
+## 1. CI (sin cambios)
 
-Se dispara en **pull requests y pushes a `develop` y `main`** (el proyecto abre
-PRs contra `develop`). Jobs:
+Se dispara en PRs y pushes a `develop` y `main`:
+- **Backend quality gates**: Python 3.12, pytest con `HELPDESK_ALLOW_IN_MEMORY=1` y `docker build`.
+- **Frontend quality gates**: Node 22, `npm ci`, lint, test, build y `docker build`.
+- **Publish Docker images**: solo en push a `main`; publica `helpdesk-backend` y
+  `helpdesk-frontend` con tags `sha-<commit>` y `latest`. En un PR aparece como
+  *skipped*: es correcto, el PR solo valida.
 
-- **Backend quality gates**: Python 3.12, `pip install -r requirements.txt`,
-  `pytest -q` con `HELPDESK_ALLOW_IN_MEMORY=1` y `docker build` del contexto
-  `backend/`.
-- **Frontend quality gates**: Node 22, `npm ci`, `npm run lint`,
-  `npm run test`, `npm run build` y `docker build` del contexto `frontend/`.
-- **Publish Docker images**: solo en **push a `main`** y tras los dos jobs
-  anteriores. Publica en GHCR con `packages: write`.
+Run verificado: `45263461824` → `success` (backend y frontend en verde).
 
-Los nombres de los checks que aparecerán en los PRs son los de los jobs:
-`Backend quality gates`, `Frontend quality gates` y `Publish Docker images`.
+Variable de repositorio pública `VITE_API_URL`: se usa en el build de la imagen
+del frontend; para la demo conviene fijarla a `https://helpdesk-api.onrender.com`.
 
-### Imágenes publicadas
+## 2. Qué crea el Blueprint
 
-```
-ghcr.io/<owner>/helpdesk-backend:sha-<commit>
-ghcr.io/<owner>/helpdesk-backend:latest
-ghcr.io/<owner>/helpdesk-frontend:sha-<commit>
-ghcr.io/<owner>/helpdesk-frontend:latest
-```
+`render.yaml` define tres recursos, todos en plan `free`:
 
-`<owner>` se deriva de `GITHUB_REPOSITORY` en minúsculas (para este repo,
-`MarHeavenn`). El tag `sha-<commit>` usa el SHA completo; el CD usa el mismo SHA
-del `workflow_run` para desplegar esa versión exacta.
+| Recurso | Nombre | Configuración |
+|---|---|---|
+| Web Service (Python) | `helpdesk-api` | `rootDir: backend`, aplica migraciones y arranca `dev_server.py`, `/health` |
+| Static Site | `helpdesk-web` | compila `frontend/` y publica `frontend/dist` |
+| Postgres | `helpdesk-db` | plan `free`, `DATABASE_URL` inyectada al API |
 
-### Variables de repositorio (no secretos)
+`autoDeployTrigger: 'off'`: Render **no** despliega solo con cada commit; lo hace
+el workflow de GitHub mediante *Deploy Hooks*. Así el despliegue sigue ocurriendo
+solo después de que CI esté en verde en `main`.
 
-- `VITE_API_URL`: URL pública de la API que se **incorpora al bundle** del
-  frontend en tiempo de build. Ejemplo: `http://<host-del-vps>:8000`. Si no se
-  define, CI usa `http://localhost:8000`.
-- `HEALTH_URL` (opcional): URL que el job de Deploy consulta con `curl --fail`
-  después de levantar los contenedores. Ejemplo: `http://<host>:8000/health`.
+### Variables a configurar en el dashboard de Render
 
-Ruta: `Settings → Secrets and variables → Actions → Variables → New repository variable`.
+El Blueprint marca varias variables con `sync: false` (no se guardan en Git):
 
-> Un valor que termina en JavaScript del navegador es público aunque se guarde
-> como secreto. No pongas credenciales en `VITE_API_URL`.
+| Variable | Dónde | Valor |
+|---|---|---|
+| `FRONTEND_ORIGINS` | `helpdesk-api` | `https://helpdesk-web.onrender.com` (o tu dominio) |
+| `DEV_ADMIN_PASSWORD` | `helpdesk-api` | Contraseña demo del administrador |
+| `DEV_TECH_PASSWORD` | `helpdesk-api` | Contraseña demo del técnico |
+| `DEV_CLIENT_PASSWORD` | `helpdesk-api` | Contraseña demo del cliente |
 
-## 2. Preparar el VPS
+Si no defines las contraseñas demo, `dev_server.py` genera unas aleatorias y las
+imprime en los logs; la cuenta se reutiliza en arranques posteriores.
 
-Una vez, como administrador del servidor:
+El backend ya soporta `SESSION_COOKIE_SECURE=true` y `SameSite=lax`. Como ambos
+servicios están bajo `*.onrender.com` son el **mismo sitio**, así que la cookie
+viaja sin pasar a `SameSite=None`. Si usas dominios distintos (ej. un dominio
+propio para el frontend), cambia `SESSION_COOKIE_SAMESITE=None` y mantén
+`SESSION_COOKIE_SECURE=true`.
 
-```bash
-sudo adduser deploy
-sudo usermod -aG docker deploy
-sudo mkdir -p /opt/helpdesk
-sudo chown -R deploy:deploy /opt/helpdesk
-```
+## 3. Preparar Render en 5 pasos
 
-Copia `deploy/compose.production.yml` a `/opt/helpdesk/compose.yml` y crea
-`/opt/helpdesk/.env` con la configuración de runtime (nunca en Git):
+1. Crear cuenta en Render (plan Hobby, $0).
+2. **New → Blueprint** → conectar el repositorio de GitHub → rama `main` → dar
+   nombre al Blueprint. Render crea los tres recursos.
+3. En `helpdesk-api`, completar las variables `sync: false` indicadas arriba.
+4. En cada servicio, abrir **Settings → Deploy Hook** y copiar su URL.
+5. En GitHub, crear el environment `production` y guardar esas URLs como
+   *environment secrets*:
+   - `RENDER_API_DEPLOY_HOOK`
+   - `RENDER_WEB_DEPLOY_HOOK`
+   
+   Variable de repositorio opcional: `HEALTH_URL` =
+   `https://helpdesk-api.onrender.com/health`.
 
-```
-POSTGRES_USER=helpdesk
-POSTGRES_PASSWORD=<valor-seguro>
-POSTGRES_DB=helpdesk
-FRONTEND_ORIGINS=http://<host>:8080
-BACKEND_PORT=8000
-FRONTEND_PORT=8080
-GHCR_OWNER=MarHeavenn
-IMAGE_TAG=sha-<commit-inicial>
-```
+## 4. Flujo de despliegue
 
-Pertenecer al grupo `docker` equivale en la práctica a controlar el host:
-gobernar ese usuario cuidadosamente.
+Push a `main` → CI en verde → el workflow `Deploy` (por `workflow_run`) llama a
+los dos Deploy Hooks con `curl --fail` → Render reconstruye y publica → el paso
+opcional `Verify health` consulta `HEALTH_URL` con reintentos.
 
-### Acceso a GHCR
+El Web Service gratuito **duerme tras 15 minutos** y tarda ~1 min en despertar;
+por eso el health check usa reintentos. Calienta la API antes de la demo.
 
-Si las imágenes son públicas, no hace falta login. Si son privadas, crear un PAT
-*classic* con **solo `read:packages`** en la cuenta con acceso al paquete y, como
-usuario `deploy`:
+## 5. Límites de la capa gratuita (importante para los 20 días)
 
-```bash
-echo "$CR_PAT" | docker login ghcr.io -u <github-user> --password-stdin
-unset CR_PAT
-```
+Verificado en la documentación de Render (2026):
 
-### Clave SSH dedicada y known_hosts
+- Static sites: gratis, CDN, sin límite de tiempo.
+- Web Service free: 750 horas/mes, 512 MB, duerme a los 15 min de inactividad.
+- Postgres free: **1 GB, expira 30 días después de crearse**, con 14 días de
+  gracia antes de borrarse; sin backups.
 
-```bash
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ./github_actions_deploy
-# publica github_actions_deploy.pub en /home/deploy/.ssh/authorized_keys
-ssh-keyscan -H <VPS_HOST>   # guardar la salida verificada como VPS_KNOWN_HOSTS
-```
+Con 20 días de ventana, crea el Blueprint **al empezar esa ventana** y la BD
+seguirá viva. Si la demo se alarga, el paso de pago es ~$6/mes de BD y ~$7/mes
+de Web Service.
 
-Prueba la clave manualmente antes de configurar GitHub. No uses
-`StrictHostKeyChecking=no` como solución habitual.
+## 6. Verificación y rollback
 
-## 3. Environment `production` y secretos
+Antes de dar por buena la demo:
+- `curl https://helpdesk-api.onrender.com/health` → 200.
+- Login con las tres cuentas y recorrido CP-01..CP-12 del README.
+- En Render → cada servicio → **Events/Logs** para confirmar qué commit se desplegó.
 
-Ruta: `Settings → Environments → New environment → production → Configure environment`.
-Opcionalmente activa *Required reviewers* y restringe los branches a `main`.
+Rollback: en el servicio de Render, abrir un deploy anterior y pulsar
+**Redeploy**. No hace falta recompilar ni tocar GHCR.
 
-Environment secrets:
+Evidencia a registrar: commit SHA, run de CI, run de Deploy, URL de los tres
+servicios y resultado del health.
 
-| Secreto | Contenido |
-|---|---|
-| `VPS_HOST` | IP o DNS del servidor |
-| `VPS_USER` | `deploy` |
-| `VPS_PORT` | Puerto SSH real (por defecto 22 en el workflow) |
-| `VPS_SSH_KEY` | Contenido de la clave privada `github_actions_deploy` |
-| `VPS_KNOWN_HOSTS` | Salida verificada de `ssh-keyscan -H` |
+## 7. Regla de protección (opcional)
 
-Los secretos funcionales de la aplicación (`POSTGRES_PASSWORD`, etc.) viven en
-el `.env` del VPS: GitHub no los necesita.
-
-## 4. Probar antes de automatizar
-
-En el VPS, como `deploy`:
-
-```bash
-cd /opt/helpdesk
-IMAGE_TAG=sha-<commit> docker compose pull
-IMAGE_TAG=sha-<commit> docker compose up -d --remove-orphans
-docker compose ps
-curl --fail http://localhost:8000/health
-```
-
-Después, integra un cambio válido en `main` y observa: CI → paquetes en GHCR →
-Deploy → `docker compose ps` → health. `Deploy` espera a que `CI` concluya con
-éxito y a que el commit esté en `main`; si hay *Required reviewers*, aprueba la
-ejecución en `Review deployments`.
-
-## 5. Health, rollback y evidencia
-
-- `docker compose ps` en `Up` demuestra que el contenedor corre; `curl /health`
-  con 200 demuestra que la app se considera saludable. No confundirlos.
-- Rollback: elegir el tag anterior en GHCR, exportar `IMAGE_TAG=sha-<anterior>`,
-  repetir `pull` + `up -d --remove-orphans` y verificar `ps` y health. No hace
-  falta recompilar. Ojo con migraciones irreversibles.
-- Evidencia a registrar: commit SHA, nombre de imagen y tag, URL del run de CI,
-  URL del run de Deploy, imagen efectiva en el VPS y resultado del health.
-
-## 6. Regla de protección (opcional)
-
-Tras el primer check verde:
-`Settings → Rulesets → New branch ruleset → apuntar a main → Require status checks
-to pass → Backend quality gates / Frontend quality gates`. Así un CI rojo bloquea
-el merge.
+Tras el primer check verde: `Settings → Rulesets → New branch ruleset → main →
+Require status checks` con `Backend quality gates` y `Frontend quality gates`.
 
 ## Limitación actual
 
-Los workflows se entregan listos, pero **no se ha observado su ejecución en
-GitHub**: eso requiere hacer push a `main` y revisar `Actions`, `Packages` y
-`Deployments`. No se afirma que CI/CD ya esté corriendo sin esa evidencia.
+El Blueprint y los workflows están listos y validados localmente (el YAML de
+Render pasó el JSON Schema oficial), pero **la cuenta de Render y los secretos
+los configura el usuario**. No se afirma que el MVP esté desplegado hasta ver
+los tres servicios en el dashboard y el health en 200.

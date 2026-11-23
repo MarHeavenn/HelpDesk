@@ -1,0 +1,51 @@
+# Blueprint de Render para una demo de 20 dias en plan free ($0).
+# Crear desde Dashboard > New > Blueprint, apuntando a la rama main.
+# El deploy se dispara con los Deploy Hooks desde .github/workflows/deploy.yml.
+
+services:
+  - type: web
+    name: helpdesk-api
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Las migraciones se aplican antes de sembrar las cuentas demo.
+    startCommand: python -m migrations.run && python dev_server.py
+    healthCheckPath: /health
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: helpdesk-db
+          property: connectionString
+      - key: FRONTEND_ORIGINS
+        sync: false # Configurar en el dashboard: https://helpdesk-web.onrender.com
+      - key: SESSION_COOKIE_SECURE
+        value: 'true'
+      - key: SESSION_COOKIE_SAMESITE
+        value: lax # Ambos servicios comparten el sitio onrender.com
+      - key: DEV_ADMIN_PASSWORD
+        sync: false
+      - key: DEV_TECH_PASSWORD
+        sync: false
+      - key: DEV_CLIENT_PASSWORD
+        sync: false
+
+  - type: web
+    name: helpdesk-web
+    runtime: static
+    branch: main
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: VITE_API_URL
+        value: https://helpdesk-api.onrender.com
+
+databases:
+  - name: helpdesk-db
+    plan: free

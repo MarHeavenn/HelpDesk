@@ -25,12 +25,15 @@
   `specs/features/HU-24-visual-panels-alerts/`.
 - Suites: backend **1574 passed / 40 skipped** en memoria; frontend **34
   archivos / 236 pruebas**; `lint` y `build` correctos; smoke 93 comprobaciones.
-- CI/CD preparada (ejercicios de la carpeta `Proceso`): `ci.yml` (calidad en
-  develop/main, publicación en GHCR solo en push a main, dos imágenes
-  `helpdesk-backend`/`helpdesk-frontend`), `deploy.yml` (`workflow_run` + SSH al
-  environment `production`) y `deploy/compose.production.yml`. Spec/plan/tareas
-  en `specs/features/CI-CD-github/`. YAML validado. PR #29 abrió el run de CI
-  `45263461824` (setup/checkout en verde; tests en curso al consultarlo).
+- CI/CD (ejercicios de la carpeta `Proceso`): `ci.yml` (calidad en develop/main,
+  GHCR solo en push a main con `helpdesk-backend`/`helpdesk-frontend`) y
+  `deploy.yml` (`workflow_run` + Deploy Hooks de Render). Run `45263461824` en
+  verde; `Publish Docker images` skipped en PR, correcto.
+- CD decidido: **todo en Render free** (Web Service `helpdesk-api`, Static Site
+  `helpdesk-web`, Postgres `helpdesk-db`) para una demo de 20 días a $0.
+  `render.yaml` con `autoDeployTrigger: 'off'` y validado con el schema oficial;
+  se retiró el compose de VPS. BD free expira a los 30 días: crearla al inicio
+  de la ventana de demo. Spec/plan/tareas en `specs/features/CI-CD-github/`.
 - R1–R9 (HU-19): `extra="forbid"`, unicidad de correo, `companies` solo por
   contrato, decisión de rama/409 en application, SLA inmutable en PATCH,
   tolerancia de heredados, redirect `/empresas` y sin código muerto.
@@ -81,15 +84,17 @@
 - Las pruebas de migración no asumen que una versión concreta sea la última.
 - Sin daemon de Docker no hay CP-13/14/16: validar compose con `docker-compose
   config -q` pero no afirmar arranque. `docker compose` v2 no está instalado.
-- No afirmar que CI/CD corre en GitHub sin ver runs/checks/paquetes; secretos
-  del VPS y environment `production` los configura el usuario, nunca en el repo.
+- No afirmar que CI/CD corre en GitHub sin ver runs/checks/paquetes; los Deploy
+  Hooks de Render y el environment `production` los configura el usuario, nunca
+  en el repo.
 - `smoke_manual.py` sin PostgreSQL necesita `HELPDESK_ALLOW_IN_MEMORY=1`; sus
   cuentas se siembran con `company_id` porque el registro público no lo asigna.
 
 ## Próximos pasos
 
-- CI/CD: configurar VPS, environment `production` y secretos; hacer push a
-  `main` y verificar CI, GHCR y Deploy con evidencia.
+- CI/CD: crear el Blueprint en Render, configurar variables del dashboard y los
+  Deploy Hooks como secrets; hacer push a `main` y verificar CI, GHCR, Deploy y
+  health. Crear la BD free al iniciar la ventana de 20 días.
 - HU-26: ejecutar CP-13/14/16 en un equipo con daemon de Docker y completar la
   spec a «implementada»; revisión visual pendiente de HU-21/HU-24.
 - Completar validación HU-16 RF por RF y revisión visual como técnico; no

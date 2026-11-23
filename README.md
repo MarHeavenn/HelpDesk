@@ -161,9 +161,10 @@ No se declara una prueba como superada sin evidencia de su ejecución.
 ## CI/CD
 
 GitHub Actions ejecuta calidad (backend y frontend) en PRs/pushes a `develop` y
-`main`, publica dos imágenes en GHCR al hacer push a `main` y despliega en un VPS
-mediante `workflow_run` + SSH. La configuración de secretos, el environment
-`production`, el compose de producción y el procedimiento de rollback están en
+`main`, publica dos imágenes en GHCR al hacer push a `main` y despliega en
+**Render** mediante `workflow_run` + Deploy Hooks. `render.yaml` crea el Web
+Service, el Static Site y PostgreSQL en plan gratuito (demo de hasta 20 días).
+La configuración de variables, secretos, health y rollback está en
 [`docs/ci-cd.md`](docs/ci-cd.md).
 
 ## Limitaciones conocidas

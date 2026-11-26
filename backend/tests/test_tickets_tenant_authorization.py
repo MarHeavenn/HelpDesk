@@ -79,4 +79,6 @@ def test_client_lists_only_own_tenant_tickets_and_account_without_company_is_hid
     tickets.add(foreign_requester)
 
     assert list_visible_tickets(ACTOR, "cliente", COMPANY_A, tickets) == [own]
-    assert list_visible_tickets(ACTOR, "cliente", None, tickets) == []
+    # RF-178 distingue denegación sin empresa de consulta autorizada vacía.
+    with pytest.raises(ValueError, match="^ticket not found$"):
+        list_visible_tickets(ACTOR, "cliente", None, tickets)

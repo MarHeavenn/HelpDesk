@@ -52,6 +52,7 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 )
 
 PASSWORD = "Secreta123"
+COMPANY = "attention-company"  # Escenarios autorizados con empresa explícita (HU-13).
 NOT_FOUND_BODY = {"detail": "ticket not found"}
 
 # Composición exacta del resumen (RF-64) y del objeto sla (HU-05, RF-44).
@@ -63,6 +64,7 @@ SUMMARY_FIELDS = {
     "assignee",
     "sla",
     "created_at",
+    "requester",
 }
 SLA_FIELDS = {
     "target_minutes",
@@ -101,6 +103,7 @@ def _provision(role: str, name: str, email: str) -> dict[str, str]:
         role=role,
         users=get_user_repository(),
     )
+    user.company_id = COMPANY
     return {
         "id": user.id,
         "name": user.name,
@@ -120,6 +123,7 @@ def _register_client(name: str, email: str) -> dict[str, str]:
         },
     )
     assert response.status_code == 201, response.text
+    get_user_repository().find_by_email(email).company_id = COMPANY
     return response.json()
 
 
@@ -145,6 +149,7 @@ def _attention_ticket(
         title=title,
         description="Descripcion del incidente",
         requester_id=requester_id,
+        company_id=COMPANY,
         created_at=datetime.now(timezone.utc) - timedelta(hours=hours_ago),
         priority=priority,
     )
@@ -172,6 +177,7 @@ def _insert_ticket(
         title=title,
         description="Descripcion",
         requester_id=requester_id,
+        company_id=COMPANY,
         created_at=datetime.now(timezone.utc) - timedelta(minutes=minutes_ago),
         priority=priority,
         status=status,
@@ -341,9 +347,8 @@ def test_each_element_has_exactly_the_summary_composition():
     assert len(items) == 1
     item = items[0]
     assert set(item) == SUMMARY_FIELDS
-    # Sin datos personales ni internos (RF-64): ni requester, ni descripcion
-    # ni fecha de resolucion (identica a HU-04/HU-06).
-    assert "requester" not in item
+    # HU-17 RF-175 añade solo el nombre, no el solicitante completo del detalle.
+    assert item["requester"] == {"name": "Cliente Uno"}
     assert "description" not in item
     assert "resolved_at" not in item
 
@@ -410,6 +415,7 @@ def test_dates_are_iso8601_rfc3339_utc_with_microseconds():
         title="Incidente con microsegundos",
         description="Descripcion",
         requester_id=requester["id"],
+        company_id=COMPANY,
         created_at=created_at,
         priority="Crítica",
     )

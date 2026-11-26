@@ -64,4 +64,5 @@ Detalle en las secciones 3.3 y 4 del documento general.
   `specs/features/CI-CD-github/` y `docs/ci-cd.md`. Workflows de GitHub Actions,
   publicación en GHCR y despliegue en Render free (20 días) preparados; crear la
   cuenta/configurar secretos y verificar ejecución real pendiente.
-- HU-17 y HU-18: definidas en el documento general (secciones 2 y 4); carpetas aún no creadas.
+- HU-17 (búsqueda y filtrado de tickets): ver `specs/features/HU-17-ticket-search-filtering/` (implementada; RF-165–RF-178; validación con límites de entorno en `tasks.md`). Sus identificadores RF-165–RF-172 coinciden con los de HU-26: citar siempre la HU junto al RF; esta integración no renumera requisitos aprobados.
+- HU-18: definida en el documento general (secciones 2 y 4); carpeta aún no creada.

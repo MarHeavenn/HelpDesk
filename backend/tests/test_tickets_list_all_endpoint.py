@@ -46,6 +46,7 @@ SUMMARY_FIELDS = {
     "assignee",
     "sla",
     "created_at",
+    "requester",
 }
 BASE = datetime(2026, 11, 10, 12, 0, 0, tzinfo=timezone.utc)
 

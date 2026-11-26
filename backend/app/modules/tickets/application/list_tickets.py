@@ -6,6 +6,10 @@ autenticado. El orden por `created_at` descendente lo garantiza el
 repositorio. Sin paginacion ni filtros; un empate de fecha no fija orden.
 """
 
+from app.modules.tickets.application.get_ticket import (
+    TICKET_NOT_FOUND_MESSAGE,
+    TicketNotFoundError,
+)
 from app.modules.tickets.domain.entities import Ticket
 from app.modules.tickets.domain.entities import TICKET_READ_ROLES
 from app.modules.tickets.infrastructure.ticket_repository import (
@@ -28,16 +32,11 @@ def list_visible_tickets(
     tickets: InMemoryTicketRepository,
 ) -> list[Ticket]:
     """Lista tickets visibles por rol y por el tenant almacenado."""
-    # Tickets legacy sin tenant conservan el contrato HU-02 de listado propio.
-    if actor_company_id is None:
-        if any(ticket.company_id is not None for ticket in tickets.list_all()):
-            return []
-        return tickets.list_by_requester(actor_id)
+    if actor_company_id is None or actor_role not in TICKET_READ_ROLES | {"cliente"}:
+        raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     visible: list[Ticket] = []
     for ticket in tickets.list_all():
         same_tenant = ticket.company_id == actor_company_id
-        if ticket.company_id is None and actor_company_id is None:
-            same_tenant = True
         if not same_tenant:
             continue
         if actor_role in TICKET_READ_ROLES or (

@@ -29,7 +29,7 @@ export default function TicketTable({
   onOpen: (ticketId: string) => void
 }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="relative overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
       <table className="min-w-full text-left text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">

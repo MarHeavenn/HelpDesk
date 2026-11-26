@@ -59,6 +59,7 @@ SUMMARY_FIELDS = {
     "assignee",
     "sla",
     "created_at",
+    "requester",
 }
 SLA_FIELDS = {
     "target_minutes",
@@ -361,10 +362,10 @@ def test_full_ticket_composition_is_identical_across_operations():
         }
 
 
-# --- RF-55: los resumenes no cambian ---
+# --- RF-55 y HU-17 RF-175: resumen mínimo distinto del detalle ---
 
 
-def test_summaries_do_not_include_requester_or_resolved_at():
+def test_summaries_include_only_requester_name_and_no_resolved_at():
     requester = _register_client("Cliente Uno", "cliente@ejemplo.com")
     requester_api = _login(requester["email"])
     created = _create_ticket(requester_api).json()
@@ -389,5 +390,5 @@ def test_summaries_do_not_include_requester_or_resolved_at():
         assert len(listing) == 1
         for item in listing:
             assert set(item) == SUMMARY_FIELDS
-            assert "requester" not in item
+            assert item["requester"] == {"name": "Cliente Uno"}
             assert "resolved_at" not in item

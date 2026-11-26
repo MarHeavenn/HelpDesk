@@ -87,6 +87,7 @@ from app.modules.tickets.interface.schemas import (
     SetPriorityRequest,
     SetStatusRequest,
     SlaResponse,
+    SummaryRequesterResponse,
     TicketResponse,
     TicketSummaryResponse,
 )
@@ -178,7 +179,13 @@ def _ticket_response(
 def ticket_summary(
     ticket: Ticket, now: datetime | None = None
 ) -> TicketSummaryResponse:
-    """Serializa el resumen del listado (sin descripcion, RF-15, RF-35.1)."""
+    """Compone un ticket ya autorizado, con solicitante mínimo (RF-175)."""
+    user = get_user_summary(ticket.requester_id)
+    requester = (
+        SummaryRequesterResponse(name=user.name)
+        if user is not None and isinstance(user.name, str)
+        else None
+    )
     return TicketSummaryResponse(
         id=ticket.id,
         title=ticket.title,
@@ -187,6 +194,7 @@ def ticket_summary(
         assignee=_assignee_response(ticket),
         sla=_sla_response(ticket, now),
         created_at=ticket.created_at.isoformat(),
+        requester=requester,
     )
 
 
@@ -421,12 +429,15 @@ def list_tickets_endpoint(
     current: dict = Depends(get_current_user),
 ) -> list[TicketSummaryResponse]:
     """Lista los tickets visibles para el rol y tenant de la sesión."""
-    tickets = list_visible_tickets(
-        actor_id=current["id"],
-        actor_role=current["role"],
-        actor_company_id=current.get("company_id"),
-        tickets=get_ticket_repository(),
-    )
+    try:
+        tickets = list_visible_tickets(
+            actor_id=current["id"],
+            actor_role=current["role"],
+            actor_company_id=current.get("company_id"),
+            tickets=get_ticket_repository(),
+        )
+    except TicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     # Un unico instante de referencia para todo el listado (HU-05).
     now = datetime.now(timezone.utc)
     return [ticket_summary(ticket, now) for ticket in tickets]
@@ -448,6 +459,7 @@ def list_attention_tickets_endpoint(
     try:
         tickets = list_attention_tickets(
             actor_role=current["role"],
+            actor_company_id=current.get("company_id"),
             tickets=get_ticket_repository(),
             now=now,
         )
@@ -460,17 +472,18 @@ def list_attention_tickets_endpoint(
 def list_all_tickets_endpoint(
     current: dict = Depends(get_current_user),
 ) -> list[TicketSummaryResponse]:
-    """Lista todos los tickets del sistema (HU-23, RF-122).
+    """Lista todos los tickets de la empresa (HU-23/RF-177).
 
     Declarada antes de `GET /{ticket_id}` para que la ruta estatica se case
-    primero y no capture `"all"` como un `ticket_id`. Solo administrador y
-    tecnico reciben datos; un cliente obtiene el 404 uniforme y, sin sesion
+    primero y no capture `"all"` como un `ticket_id`. Administrador, supervisor y
+    tecnico con empresa reciben datos; un cliente obtiene el 404 uniforme y, sin sesion
     valida, `get_current_user` responde 401 antes del handler (RF-122).
     """
     now = datetime.now(timezone.utc)
     try:
         tickets = list_all_tickets(
             actor_role=current["role"],
+            actor_company_id=current.get("company_id"),
             tickets=get_ticket_repository(),
         )
     except TicketNotFoundError as exc:

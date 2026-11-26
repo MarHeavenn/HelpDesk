@@ -1,12 +1,68 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createTicketsApi, type RequestFn } from '@/api/tickets.api'
+import type { TicketRequester, TicketSummary } from '@/types/ticket'
 
 function httpMock(payload: unknown = {}): RequestFn {
   return vi.fn(async () => payload) as unknown as RequestFn
 }
 
 describe('tickets.api', () => {
+  const summary = {
+    id: 'ticket-1',
+    title: 'No puedo entrar al portal',
+    priority: 'Alta',
+    status: 'Abierto',
+    assignee: { id: 'tech-1', name: 'Ana Técnica' },
+    sla: {
+      target_minutes: 240,
+      started_at: '2026-11-22T08:00:00+00:00',
+      due_at: '2026-11-22T12:00:00+00:00',
+      elapsed_minutes: 60,
+      remaining_minutes: 180,
+      status: 'en_tiempo',
+      near_due: false,
+      breached: false,
+    },
+    created_at: '2026-11-22T08:00:00+00:00',
+  }
+
+  it('tipa el solicitante mínimo opcional sin cambiar el solicitante del detalle', () => {
+    expectTypeOf<TicketSummary['requester']>().toEqualTypeOf<
+      { name: string } | null | undefined
+    >()
+    expectTypeOf<TicketRequester>().toEqualTypeOf<{
+      id: string
+      name: string
+      email: string
+    }>()
+  })
+
+  describe.each([
+    ['listAll', '/api/tickets/all'],
+    ['listMine', '/api/tickets'],
+    ['listAssigned', '/api/assignments/mine'],
+  ] as const)('%s', (method, path) => {
+    it.each([
+      ['nombre', { ...summary, requester: { name: 'Carla Cliente' } }],
+      ['nulo', { ...summary, requester: null }],
+      ['ausente (respuesta anterior)', { ...summary }],
+    ])('conserva el resumen con solicitante %s sin peticiones adicionales', async (_, row) => {
+      // Dos filas permiten detectar también un intento de completar cada detalle.
+      const payload = [row, { ...row, id: 'ticket-2' }]
+      const http = httpMock(payload)
+      const api = createTicketsApi(http)
+
+      const result = await api[method]()
+
+      expect(result).toBe(payload)
+      expect(result).toEqual(payload)
+      expect('requester' in result[0]).toBe('requester' in row)
+      expect(http).toHaveBeenCalledTimes(1)
+      expect(http).toHaveBeenCalledWith(path)
+    })
+  })
+
   it('consulta los tres alcances del listado', async () => {
     const http = httpMock([])
     const api = createTicketsApi(http)

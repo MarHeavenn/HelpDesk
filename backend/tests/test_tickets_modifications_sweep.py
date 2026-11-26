@@ -102,7 +102,7 @@ DETAIL_FIELDS = {
     "resolved_at",
     "requester_id",
 }
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at", "requester"}
 
 # Mapa RF -> test(s) que lo cubren (contrastado por
 # `test_sweep_rf_map_covers_all_requirements`).

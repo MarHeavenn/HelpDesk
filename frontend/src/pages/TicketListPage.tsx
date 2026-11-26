@@ -13,6 +13,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import { useAuth } from '@/context/AuthContext'
 import { useTicketList } from '@/hooks/useTickets'
 import {
+  clearTicketFilters,
   filterTickets,
   paginateTickets,
   parseTicketQuery,
@@ -60,35 +61,53 @@ export default function TicketListPage({
   const listQuery = useTicketList(scope, api)
   const tickets = useMemo(() => listQuery.data ?? [], [listQuery.data])
 
-  const technicians = useMemo(() => technicianOptions(tickets), [tickets])
-  const filtered = useMemo(
-    () => filterTickets(tickets, filters),
-    [tickets, filters],
-  )
-  const sorted = useMemo(
-    () => sortTickets(filtered, filters.sort),
-    [filtered, filters.sort],
-  )
-  const page = useMemo(
-    () => paginateTickets(sorted, filters.page),
-    [sorted, filters.page],
-  )
-
   const role = user?.role
   const showTechnician = role === 'administrador' || role === 'tecnico'
 
-  // Una página fuera de rango se normaliza y se refleja en la URL.
+  // Cliente y supervisor no aplican el filtro de técnico, ni siquiera forzado por URL.
+  const effectiveFilters = useMemo(
+    () => (showTechnician ? filters : { ...filters, assignee: 'all' }),
+    [filters, showTechnician],
+  )
+
+  const technicians = useMemo(() => technicianOptions(tickets), [tickets])
+  const filtered = useMemo(
+    () => filterTickets(tickets, effectiveFilters),
+    [tickets, effectiveFilters],
+  )
+  const sorted = useMemo(
+    () => sortTickets(filtered, effectiveFilters.sort),
+    [filtered, effectiveFilters.sort],
+  )
+  const page = useMemo(
+    () => paginateTickets(sorted, effectiveFilters.page),
+    [sorted, effectiveFilters.page],
+  )
+
+  // Una página fuera de rango se normaliza y un técnico no permitido se retira
+  // de la URL, siempre sobre el subconjunto ya filtrado.
   useEffect(() => {
     if (!listQuery.isSuccess) return
-    if (filters.page !== page.page) {
-      setSearchParams(ticketQueryToParams({ ...filters, page: page.page }), {
-        replace: true,
-      })
+    const pageChanged = effectiveFilters.page !== page.page
+    const assigneeForbidden = !showTechnician && filters.assignee !== 'all'
+    if (pageChanged || assigneeForbidden) {
+      setSearchParams(
+        ticketQueryToParams({ ...effectiveFilters, page: page.page }),
+        { replace: true },
+      )
     }
-  }, [listQuery.isSuccess, filters, page.page, setSearchParams])
+  }, [
+    listQuery.isSuccess,
+    effectiveFilters,
+    filters.assignee,
+    page.page,
+    setSearchParams,
+    showTechnician,
+  ])
 
   function changeFilters(next: Filters) {
-    setSearchParams(ticketQueryToParams(next), { replace: true })
+    const allowed = showTechnician ? next : { ...next, assignee: 'all' }
+    setSearchParams(ticketQueryToParams(allowed), { replace: true })
   }
 
   const unauthorized =
@@ -108,7 +127,7 @@ export default function TicketListPage({
       ) : (
         <div className="space-y-4">
           <TicketFilters
-            filters={filters}
+            filters={effectiveFilters}
             onChange={changeFilters}
             technicians={technicians}
             showTechnician={showTechnician}
@@ -136,16 +155,7 @@ export default function TicketListPage({
               action={
                 <button
                   type="button"
-                  onClick={() =>
-                    changeFilters({
-                      ...filters,
-                      query: '',
-                      priority: 'all',
-                      status: 'all',
-                      assignee: 'all',
-                      page: 1,
-                    })
-                  }
+                  onClick={() => changeFilters(clearTicketFilters(effectiveFilters))}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   {strings.tickets.clear}
@@ -174,7 +184,7 @@ export default function TicketListPage({
                 page={page.page}
                 pages={page.pages}
                 onChange={(next) =>
-                  changeFilters({ ...filters, page: next })
+                  changeFilters({ ...effectiveFilters, page: next })
                 }
               />
             </>

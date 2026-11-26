@@ -38,6 +38,7 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 )
 
 NOW = datetime(2026, 11, 2, 12, 0, 0, tzinfo=timezone.utc)
+COMPANY = "attention-company"
 
 
 def _ticket(
@@ -53,6 +54,7 @@ def _ticket(
         title="Titulo",
         description="Descripcion",
         requester_id="u-1",
+        company_id=COMPANY,
         created_at=created_at,
         priority=priority,
         status=status,
@@ -72,7 +74,7 @@ class _BoomRepository:
 
 def test_client_role_raises_before_reading_repository():
     with pytest.raises(TicketNotFoundError) as exc:
-        list_attention_tickets("cliente", _BoomRepository(), now=NOW)
+        list_attention_tickets("cliente", _BoomRepository(), now=NOW, actor_company_id=COMPANY)
 
     assert str(exc.value) == TICKET_NOT_FOUND_MESSAGE
 
@@ -89,7 +91,7 @@ def test_client_role_error_matches_h02_h03_unified_message():
     )
 
     with pytest.raises(TicketNotFoundError) as exc:
-        list_attention_tickets("cliente", repo, now=NOW)
+        list_attention_tickets("cliente", repo, now=NOW, actor_company_id=COMPANY)
 
     assert isinstance(exc.value, ValueError)
     assert str(exc.value) == TICKET_NOT_FOUND_MESSAGE
@@ -101,8 +103,8 @@ def test_client_role_error_matches_h02_h03_unified_message():
 def test_empty_repository_returns_empty_list_for_management_role():
     repo = InMemoryTicketRepository()
 
-    assert list_attention_tickets("tecnico", repo, now=NOW) == []
-    assert list_attention_tickets("administrador", repo, now=NOW) == []
+    assert list_attention_tickets("tecnico", repo, now=NOW, actor_company_id=COMPANY) == []
+    assert list_attention_tickets("administrador", repo, now=NOW, actor_company_id=COMPANY) == []
 
 
 # --- RF-61: filtro de activos con near_due o breached ---
@@ -163,7 +165,7 @@ def test_attention_keeps_at_risk_and_breached_and_drops_the_rest():
         )
     )
 
-    result = list_attention_tickets("tecnico", repo, now=NOW)
+    result = list_attention_tickets("tecnico", repo, now=NOW, actor_company_id=COMPANY)
 
     assert {ticket.id for ticket in result} == {"t-breached", "t-risk"}
 
@@ -179,7 +181,7 @@ def test_active_en_progreso_at_risk_appears():
         )
     )
 
-    result = list_attention_tickets("administrador", repo, now=NOW)
+    result = list_attention_tickets("administrador", repo, now=NOW, actor_company_id=COMPANY)
 
     assert [ticket.id for ticket in result] == ["t-progress"]
 
@@ -215,7 +217,7 @@ def test_attention_is_ordered_by_due_at_ascending():
         )
     )
 
-    result = list_attention_tickets("tecnico", repo, now=NOW)
+    result = list_attention_tickets("tecnico", repo, now=NOW, actor_company_id=COMPANY)
 
     assert [ticket.id for ticket in result] == [
         "t-breach",
@@ -242,7 +244,7 @@ def test_attention_filter_matches_get_ticket_sla_indicators():
         )
     )
 
-    result = list_attention_tickets("tecnico", repo, now=NOW)
+    result = list_attention_tickets("tecnico", repo, now=NOW, actor_company_id=COMPANY)
 
     sla = get_ticket_sla(
         TicketSlaSnapshot("Baja", created, None),

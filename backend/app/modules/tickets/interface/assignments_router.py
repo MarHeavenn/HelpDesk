@@ -3,17 +3,18 @@
 Prefijo propio `/api/assignments` (D6): no compite con
 `GET /api/tickets/{ticket_id}` ni depende del orden de declaracion de
 rutas. Solo comunica: delega en el caso de uso y compone el resumen. La
-sesion (`get_current_user`, 401) es el unico requisito; no hay permiso
-adicional (RF-40), y el rol no se toma de la peticion. Los parametros de
+sesion (`get_current_user`, 401) y su empresa delimitan la consulta; no hay permiso
+de rol adicional (RF-40), y el rol no se toma de la peticion. Los parametros de
 consulta desconocidos se ignoran en silencio (sin declarar parametros).
 No muta tickets ni registros.
 """
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.modules.identity.interface.dependencies import get_current_user
+from app.modules.tickets.application.get_ticket import TicketNotFoundError
 from app.modules.tickets.application.list_assigned_tickets import (
     list_assigned_tickets,
 )
@@ -31,10 +32,14 @@ def list_my_assigned_tickets_endpoint(
     current: dict = Depends(get_current_user),
 ) -> list[TicketSummaryResponse]:
     """Lista los tickets a cargo del usuario, mas recientes primero."""
-    tickets = list_assigned_tickets(
-        assignee_id=current["id"],
-        tickets=get_ticket_repository(),
-    )
+    try:
+        tickets = list_assigned_tickets(
+            assignee_id=current["id"],
+            actor_company_id=current.get("company_id"),
+            tickets=get_ticket_repository(),
+        )
+    except TicketNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     # Un unico instante de referencia para todo el listado (HU-05).
     now = datetime.now(timezone.utc)
     return [ticket_summary(ticket, now) for ticket in tickets]

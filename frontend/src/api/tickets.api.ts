@@ -19,13 +19,17 @@ function ticketPath(ticketId: string): string {
   return `/api/tickets/${encodeURIComponent(ticketId)}`
 }
 
-/** Contrato HTTP de tickets: listados, detalle, acciones, técnicos y comentarios. */
+/**
+ * Contrato HTTP de tickets: listados, detalle, acciones, técnicos y comentarios.
+ * Los listados conservan el resumen recibido, incluido requester mínimo/nulo/ausente,
+ * sin completar filas mediante consultas de detalle o directorio.
+ */
 export function createTicketsApi(http: RequestFn = request) {
   return {
     createTicket(input: CreateTicketInput): Promise<Ticket> {
       return http<Ticket>('/api/tickets', { method: 'POST', body: input })
     },
-    /** Tickets creados por el usuario autenticado (HU-02, RF-15). */
+    /** Tickets visibles para el actor autenticado según su alcance (HU-13). */
     listMine(): Promise<TicketSummary[]> {
       return http<TicketSummary[]>('/api/tickets')
     },
@@ -33,7 +37,7 @@ export function createTicketsApi(http: RequestFn = request) {
     listAssigned(): Promise<TicketSummary[]> {
       return http<TicketSummary[]>('/api/assignments/mine')
     },
-    /** Todos los tickets; solo administrador y técnico (HU-23, RF-122). */
+    /** Tickets de la empresa; administrador, supervisor y técnico (HU-17, RF-177). */
     listAll(): Promise<TicketSummary[]> {
       return http<TicketSummary[]>('/api/tickets/all')
     },

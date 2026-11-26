@@ -323,8 +323,14 @@ def run(base_url: str, smoke: Smoke) -> None:
             "assignee",
             "sla",
             "created_at",
+            "requester",
         },
         str(mine[0]),
+    )
+    smoke.check(
+        "El solicitante del resumen expone solo el nombre (HU-17)",
+        mine[0].get("requester") == {"name": CLIENT["name"]},
+        str(mine[0].get("requester")),
     )
     smoke.status(
         "Cliente no accede al listado global",

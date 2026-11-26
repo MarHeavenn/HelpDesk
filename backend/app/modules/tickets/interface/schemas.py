@@ -187,12 +187,19 @@ class TicketResponse(BaseModel):
     requester_id: str
 
 
+class SummaryRequesterResponse(BaseModel):
+    """Solicitante mínimo del listado: solo nombre (HU-17, RF-175)."""
+
+    name: str
+
+
 class TicketSummaryResponse(BaseModel):
     """Resumen de un ticket para el listado (RF-15, RF-27.2, RF-35.1).
 
-    Exactamente `{id, title, priority, status, assignee, sla, created_at}`:
-    no incluye la descripcion ni el identificador del solicitante. `sla`
+    Exactamente `{id, title, priority, status, assignee, sla, created_at, requester}`:
+    no incluye la descripcion ni el identificador o correo del solicitante. `sla`
     es `None` mientras el ticket no tenga prioridad (HU-05, RF-42).
+    `requester` contiene solo el nombre o `None` si no se puede resolver.
     """
 
     id: str
@@ -202,6 +209,7 @@ class TicketSummaryResponse(BaseModel):
     assignee: AssigneeResponse | None
     sla: SlaResponse | None
     created_at: str
+    requester: SummaryRequesterResponse | None
 
 
 class NotificationTicketResponse(BaseModel):

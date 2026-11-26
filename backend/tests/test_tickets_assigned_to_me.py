@@ -58,7 +58,7 @@ from app.modules.tickets.infrastructure.ticket_repository import (
 PASSWORD = "Secreta123"
 BASE = datetime(2026, 10, 19, 12, 0, 0, tzinfo=timezone.utc)
 # Composicion exacta del resumen (RF-15, RF-35.1, RF-36), con `assignee`.
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at", "requester"}
 ASSIGNEE_FIELDS = {"id", "name"}
 
 api = TestClient(app)
@@ -132,6 +132,7 @@ def _ticket(assignee_id=None, assignee_name=None, **overrides):
         "description": "Descripcion",
         "requester_id": str(uuid.uuid4()),
         "created_at": BASE,
+        "company_id": "legacy-company",  # Empresa explícita de estos escenarios válidos.
     }
     if assignee_id is not None:
         values["assignee_id"] = assignee_id
@@ -245,7 +246,7 @@ def test_list_assigned_tickets_returns_only_the_authenticated_assignee():
     repo.add(_ticket(created_at=BASE + timedelta(minutes=3)))
     repo.add(second)
 
-    result = list_assigned_tickets(technician_id, repo)
+    result = list_assigned_tickets(technician_id, repo, actor_company_id="legacy-company")
 
     assert [ticket.id for ticket in result] == [second.id, first.id]
 

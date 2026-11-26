@@ -65,7 +65,7 @@ PASSWORD = "Secreta123"
 
 # Composiciones exactas de RF-35.1, RF-35.2 y RF-35.3 (D7), ampliadas por
 # HU-05 (`sla`) y HU-06 (`requester` y `resolved_at` en el detalle).
-SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at"}
+SUMMARY_FIELDS = {"id", "title", "priority", "status", "assignee", "sla", "created_at", "requester"}
 DETAIL_FIELDS = {
     "id",
     "title",

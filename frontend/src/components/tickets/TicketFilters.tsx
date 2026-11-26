@@ -2,7 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 
 import {
+  clearTicketFilters,
   hasActiveTicketFilters,
+  TICKET_SLA_STATUSES,
   TICKET_SORTS,
   type TicketFilters as Filters,
   type TicketSort,
@@ -27,8 +29,22 @@ export default function TicketFilters({
 }) {
   const fieldId = useId()
   const [search, setSearch] = useState(filters.query)
+  const [requester, setRequester] = useState(filters.requester)
+  const [lastQuery, setLastQuery] = useState(filters.query)
+  const [lastRequester, setLastRequester] = useState(filters.requester)
   const onChangeRef = useRef(onChange)
   const filtersRef = useRef(filters)
+
+  // Sincroniza los textos durante el render cuando la URL cambia por otra vía
+  // (atrás, limpiar desde el vacío), antes de que el debounce pueda reescribirlos.
+  if (lastQuery !== filters.query) {
+    setLastQuery(filters.query)
+    setSearch(filters.query)
+  }
+  if (lastRequester !== filters.requester) {
+    setLastRequester(filters.requester)
+    setRequester(filters.requester)
+  }
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -37,11 +53,6 @@ export default function TicketFilters({
   useEffect(() => {
     filtersRef.current = filters
   }, [filters])
-
-  // Sincroniza el buscador cuando la URL cambia por otra vía (atrás, limpiar).
-  useEffect(() => {
-    setSearch(filters.query)
-  }, [filters.query])
 
   // Debounce de 300 ms: solo actualiza la URL cuando el término es estable.
   useEffect(() => {
@@ -55,6 +66,18 @@ export default function TicketFilters({
     return () => window.clearTimeout(timer)
   }, [search, filters.query])
 
+  // El solicitante es un campo libre, sin directorio ni llamadas adicionales.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const current = filtersRef.current
+      const value = requester.trim()
+      if (value !== current.requester) {
+        onChangeRef.current({ ...current, requester: value, page: 1 })
+      }
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [requester, filters.requester])
+
   function update(patch: Partial<Filters>) {
     onChange({ ...filters, ...patch, page: 1 })
   }
@@ -64,7 +87,7 @@ export default function TicketFilters({
       aria-label={strings.tickets.filtersLabel}
       className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
     >
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
           <label
             htmlFor={`${fieldId}-search`}
@@ -86,6 +109,23 @@ export default function TicketFilters({
               className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
             />
           </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor={`${fieldId}-requester`}
+            className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
+          >
+            {strings.tickets.requesterFilter}
+          </label>
+          <input
+            id={`${fieldId}-requester`}
+            type="search"
+            value={requester}
+            onChange={(event) => setRequester(event.target.value)}
+            placeholder={strings.tickets.requesterPlaceholder}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+          />
         </div>
 
         <div>
@@ -159,6 +199,29 @@ export default function TicketFilters({
 
         <div>
           <label
+            htmlFor={`${fieldId}-sla`}
+            className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
+          >
+            {strings.tickets.slaFilter}
+          </label>
+          <select
+            id={`${fieldId}-sla`}
+            value={filters.sla}
+            onChange={(event) => update({ sla: event.target.value })}
+            className={SELECT_CLASS}
+          >
+            <option value="all">{strings.tickets.all}</option>
+            <option value="none">{strings.tickets.noSla}</option>
+            {TICKET_SLA_STATUSES.map((sla) => (
+              <option key={sla} value={sla}>
+                {strings.tickets.slaStatus[sla]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
             htmlFor={`${fieldId}-sort`}
             className="block text-xs font-semibold uppercase tracking-wide text-slate-500"
           >
@@ -185,16 +248,11 @@ export default function TicketFilters({
         <div className="mt-3">
           <button
             type="button"
-            onClick={() =>
-              onChange({
-                ...filters,
-                query: '',
-                priority: 'all',
-                status: 'all',
-                assignee: 'all',
-                page: 1,
-              })
-            }
+            onClick={() => {
+              setSearch('')
+              setRequester('')
+              onChange(clearTicketFilters(filters))
+            }}
             className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             {strings.tickets.clear}

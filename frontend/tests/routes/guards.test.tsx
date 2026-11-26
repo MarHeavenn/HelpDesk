@@ -184,6 +184,21 @@ describe('rutas y guards', () => {
     },
   )
 
+  it.each(['/tickets', '/tickets?status=Abierto&requester=ana'])(
+    'redirige al cliente fuera de «Todos los tickets» sin aplicar sus criterios (%s)',
+    async (route) => {
+      renderRoute(route, CLIENTE)
+
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Mis tickets' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole('heading', { name: 'Todos los tickets' }),
+      ).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Técnico')).not.toBeInTheDocument()
+    },
+  )
+
   it('redirige al técnico de /empresas a / sin renderizar datos de empresa', async () => {
     renderRoute('/empresas', TECNICO)
 

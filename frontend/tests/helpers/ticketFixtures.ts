@@ -34,6 +34,7 @@ export function buildSummary(
     priority: 'Alta',
     status: 'Abierto',
     assignee: null,
+    requester: { name: 'Carla Cliente' },
     sla: buildSla(),
     created_at: '2026-11-10T08:00:00+00:00',
     ...overrides,

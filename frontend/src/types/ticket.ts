@@ -31,6 +31,11 @@ export interface TicketRequester {
   email: string
 }
 
+/** Solicitante mínimo del listado (HU-17), sin datos del detalle. */
+export interface TicketSummaryRequester {
+  name: string
+}
+
 /** SLA calculado de un ticket (HU-05). `null` mientras no tenga prioridad. */
 export interface TicketSla {
   target_minutes: number
@@ -50,6 +55,8 @@ export interface TicketSummary {
   priority: string | null
   status: string
   assignee: TicketAssignee | null
+  /** Ausente en respuestas anteriores; nulo si el solicitante no es identificable. */
+  requester?: TicketSummaryRequester | null
   sla: TicketSla | null
   created_at: string
 }

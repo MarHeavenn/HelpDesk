@@ -7,6 +7,19 @@ export type TicketSort = (typeof TICKET_SORTS)[number]
 
 export type TicketListScope = 'all' | 'mine' | 'assigned'
 
+/** Estados concretos del snapshot de SLA, con sus literales de negocio. */
+export const TICKET_SLA_STATUSES = [
+  'en_tiempo',
+  'en_riesgo',
+  'cumplido',
+  'incumplido',
+] as const
+
+/** `'all'`, `'none'` («Sin SLA») o un estado concreto del snapshot. */
+export const TICKET_SLA_FILTERS = ['all', 'none', ...TICKET_SLA_STATUSES] as const
+
+export type TicketSlaFilter = (typeof TICKET_SLA_FILTERS)[number]
+
 export interface TicketFilters {
   query: string
   /** `'all'` o una prioridad del catálogo. */
@@ -15,6 +28,10 @@ export interface TicketFilters {
   status: string
   /** `'all'`, `'unassigned'` o el identificador de un técnico. */
   assignee: string
+  /** Texto libre sobre el nombre del solicitante; vacío no restringe. */
+  requester: string
+  /** `'all'`, `'none'` («Sin SLA») o un estado concreto del snapshot. */
+  sla: string
   sort: TicketSort
   page: number
 }
@@ -24,6 +41,8 @@ export const DEFAULT_TICKET_FILTERS: TicketFilters = {
   priority: 'all',
   status: 'all',
   assignee: 'all',
+  requester: '',
+  sla: 'all',
   sort: 'recent',
   page: 1,
 }
@@ -52,6 +71,28 @@ function matchesQuery(ticket: TicketSummary, query: string): boolean {
   )
 }
 
+/** Nombre parcial del solicitante con la normalización existente; sin correo ni ID. */
+function matchesRequester(
+  ticket: TicketSummary,
+  requester: string | undefined,
+): boolean {
+  const normalized = requester?.trim().toLocaleLowerCase('es-CO') ?? ''
+  if (!normalized) return true
+  const name = ticket.requester?.name
+  if (typeof name !== 'string') return false
+  return name.toLocaleLowerCase('es-CO').includes(normalized)
+}
+
+/** Compara el literal de negocio del SLA; no usa color, banderas ni plazos. */
+function matchesSla(
+  ticket: TicketSummary,
+  sla: string | undefined,
+): boolean {
+  if (!sla || sla === 'all') return true
+  if (sla === 'none') return !ticket.sla
+  return ticket.sla?.status === sla
+}
+
 /** Aplica los filtros combinables del listado. No muta la entrada. */
 export function filterTickets(
   tickets: readonly TicketSummary[],
@@ -73,6 +114,8 @@ export function filterTickets(
     ) {
       return false
     }
+    if (!matchesRequester(ticket, filters.requester)) return false
+    if (!matchesSla(ticket, filters.sla)) return false
     return true
   })
 }
@@ -145,6 +188,7 @@ export function parseTicketQuery(params: URLSearchParams): TicketFilters {
   const priority = params.get('priority')
   const status = params.get('status')
   const assignee = params.get('assignee')
+  const sla = params.get('sla')
   const sort = params.get('sort')
   const rawPage = Number(params.get('page'))
 
@@ -159,6 +203,11 @@ export function parseTicketQuery(params: URLSearchParams): TicketFilters {
         ? status
         : 'all',
     assignee: assignee && assignee.trim() ? assignee.trim() : 'all',
+    requester: params.get('requester')?.trim() ?? '',
+    sla:
+      sla && (TICKET_SLA_FILTERS as readonly string[]).includes(sla)
+        ? sla
+        : 'all',
     sort: sort && (TICKET_SORTS as readonly string[]).includes(sort)
       ? (sort as TicketSort)
       : 'recent',
@@ -170,10 +219,13 @@ export function parseTicketQuery(params: URLSearchParams): TicketFilters {
 export function ticketQueryToParams(filters: TicketFilters): URLSearchParams {
   const params = new URLSearchParams()
   const query = filters.query.trim()
+  const requester = filters.requester.trim()
   if (query) params.set('q', query)
   if (filters.priority !== 'all') params.set('priority', filters.priority)
   if (filters.status !== 'all') params.set('status', filters.status)
   if (filters.assignee !== 'all') params.set('assignee', filters.assignee)
+  if (requester) params.set('requester', requester)
+  if (filters.sla !== 'all') params.set('sla', filters.sla)
   if (filters.sort !== 'recent') params.set('sort', filters.sort)
   if (filters.page > 1) params.set('page', String(filters.page))
   return params
@@ -185,8 +237,19 @@ export function hasActiveTicketFilters(filters: TicketFilters): boolean {
     filters.query.trim().length > 0 ||
     filters.priority !== 'all' ||
     filters.status !== 'all' ||
-    filters.assignee !== 'all'
+    filters.assignee !== 'all' ||
+    filters.requester.trim().length > 0 ||
+    filters.sla !== 'all'
   )
+}
+
+/**
+ * Limpieza común de ambos botones: vacía textos, deja los selectores en
+ * «Todos» (el SLA nunca queda en `none`), vuelve a la página 1 y conserva
+ * el orden elegido. No muta la entrada.
+ */
+export function clearTicketFilters(filters: TicketFilters): TicketFilters {
+  return { ...DEFAULT_TICKET_FILTERS, sort: filters.sort }
 }
 
 /** Técnicos presentes en el listado, ordenados por nombre, para el filtro. */

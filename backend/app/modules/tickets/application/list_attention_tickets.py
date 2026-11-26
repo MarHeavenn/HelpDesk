@@ -38,6 +38,8 @@ def list_attention_tickets(
     actor_role: str,
     tickets: InMemoryTicketRepository,
     now: datetime | None = None,
+    *,
+    actor_company_id: str | None,
 ) -> list[Ticket]:
     """Tickets que requieren atencion por SLA, mas urgentes primero (RF-61, RF-65).
 
@@ -47,11 +49,13 @@ def list_attention_tickets(
     SLA de todo el listado. Conserva solo los activos con `near_due` o
     `breached` y los ordena por `due_at` ascendente.
     """
-    if actor_role not in MANAGEMENT_ROLES:
+    if actor_company_id is None or actor_role not in MANAGEMENT_ROLES:
         raise TicketNotFoundError(TICKET_NOT_FOUND_MESSAGE)
     reference = now if now is not None else datetime.now(timezone.utc)
     attention: list[tuple[datetime, Ticket]] = []
     for ticket in tickets.list_all():
+        if ticket.company_id != actor_company_id:
+            continue
         if ticket.status in RESOLVED_STATUSES:
             continue
         sla = get_ticket_sla(

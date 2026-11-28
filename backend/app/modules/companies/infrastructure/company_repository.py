@@ -10,6 +10,7 @@ transaccional que expone `name_lock`.
 from contextlib import contextmanager
 from threading import RLock
 from typing import Iterator
+from uuid import UUID
 
 from app.infrastructure.db import (
     connection,
@@ -50,14 +51,64 @@ class InMemoryCompanyRepository:
                     raise
 
     def find_by_id(self, company_id: str) -> Company | None:
-        """Busca por identificador; None si no existe o no es texto."""
+        """Recupera la empresa canónica; memoria solo mediante seam explícito.
+
+        Con PostgreSQL cada llamada consulta `companies` y devuelve un
+        agregado nuevo: no hidrata ni reutiliza la memoria del proceso. Un
+        identificador que no es UUID no consulta la tabla y da `None` (404
+        uniforme); los errores SQL se propagan sin fallback.
+        """
         if not isinstance(company_id, str):
             return None
+        if postgres_configured():
+            try:
+                canonical_id = str(UUID(company_id))
+            except ValueError:
+                return None
+            with connection() as conn:
+                return self._find_persistent_by_id(canonical_id, conn)
+        if not in_memory_fallback_enabled():
+            raise RuntimeError(
+                "Configura DATABASE_URL o POSTGRES_PASSWORD para consultar empresas"
+            )
         return self._by_id.get(company_id)
 
     def list_all(self) -> list[Company]:
-        """Devuelve una copia de todas las empresas almacenadas."""
+        """Devuelve el catálogo confirmado sin hidratar la caché.
+
+        Con PostgreSQL lee todas las filas en cada llamada, en orden estable
+        por fecha de alta e identificador. Los consumidores conservan sus
+        filtros y ordenaciones contratadas. El seam de memoria mantiene el
+        orden de inserción y las referencias heredadas.
+        """
+        if postgres_configured():
+            with connection() as conn:
+                rows = conn.execute(
+                    """
+                    SELECT id::text AS id, name, name_normalized, email, phone,
+                           contact_name, status, created_at
+                    FROM companies
+                    ORDER BY created_at, id
+                    """
+                ).fetchall()
+            return [self._company_from_row(row) for row in rows]
+        if not in_memory_fallback_enabled():
+            raise RuntimeError(
+                "Configura DATABASE_URL o POSTGRES_PASSWORD para consultar empresas"
+            )
         return list(self._by_id.values())
+
+    def _find_persistent_by_id(self, company_id: str, conn) -> Company | None:
+        row = conn.execute(
+            """
+            SELECT id::text AS id, name, name_normalized, email, phone,
+                   contact_name, status, created_at
+            FROM companies
+            WHERE id = %s
+            """,
+            (company_id,),
+        ).fetchone()
+        return self._company_from_row(row) if row else None
 
     def find_by_name_normalized(
         self, name_normalized: str, conn=None
@@ -130,7 +181,11 @@ class InMemoryCompanyRepository:
                 conn.execute("DELETE FROM companies WHERE id = %s", (company_id,))
 
     def count(self) -> int:
-        """Numero de empresas almacenadas."""
+        """Numero de empresas retenidas en memoria (apoyo de pruebas).
+
+        No es la autoridad del catálogo: con PostgreSQL las lecturas van a
+        `companies` y este contador local puede quedar en cero.
+        """
         return len(self._by_id)
 
     def clear(self) -> None:

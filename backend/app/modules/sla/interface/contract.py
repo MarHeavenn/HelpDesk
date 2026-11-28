@@ -5,12 +5,18 @@ con un `TicketSlaSnapshot`. El modulo sla no importa nada de `tickets` ni
 accede a sus repositorios: solo recibe los datos que necesita (prioridad,
 creacion y resolucion) y devuelve el resultado o None. Es el contrato que
 evita una dependencia circular entre ambos modulos.
+
+HU-18 añade `evaluate_frozen_resolution`: evaluación pura con objetivo
+conservado, sin política vigente ni selección de estados o empresa.
 """
 
 from datetime import datetime
 
 from app.modules.sla.application.calculate_ticket_sla import (
     calculate_ticket_sla,
+)
+from app.modules.sla.application.frozen_resolution import (
+    evaluate_frozen_resolution as evaluate_frozen_resolution,
 )
 from app.modules.sla.domain.entities import TicketSla, TicketSlaSnapshot
 

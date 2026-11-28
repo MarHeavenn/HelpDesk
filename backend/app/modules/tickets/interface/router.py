@@ -96,15 +96,21 @@ router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
 
 def _assignee_response(ticket: Ticket) -> AssigneeResponse | None:
-    """Compone el tecnico responsable o `None` si el ticket no esta asignado.
+    """Compone una asignación ya autorizada sin reemplazar su proyección.
 
-    La entidad mantiene `assignee_id` y `assignee_name` siempre ambos
-    `None` o ambos con valor (D8); una proyeccion incompleta se trata como
-    no asignada para no inventar un nombre (RF-35.3).
+    El legado sin nombre usa el nombre actual por el contrato de identidad,
+    no la elegibilidad actual para asignar. No modifica el agregado ni
+    presenta ese nombre como histórico (HU-26 B.I.8).
     """
-    if ticket.assignee_id is None or ticket.assignee_name is None:
+    if ticket.assignee_id is None:
         return None
-    return AssigneeResponse(id=ticket.assignee_id, name=ticket.assignee_name)
+    name = ticket.assignee_name
+    if name is None:
+        user = get_user_summary(ticket.assignee_id)
+        if user is None:
+            raise RuntimeError("No se puede componer el nombre de la asignación conservada")
+        name = user.name
+    return AssigneeResponse(id=ticket.assignee_id, name=name)
 
 
 def _sla_response(

@@ -9,12 +9,14 @@ import KpiCard from '@/components/dashboard/KpiCard'
 import NotificationsCard from '@/components/dashboard/NotificationsCard'
 import RecentTicketsTable from '@/components/dashboard/RecentTicketsTable'
 import SlaCompliancePanel from '@/components/dashboard/SlaCompliancePanel'
+import SupportMetricsPanel from '@/components/dashboard/SupportMetricsPanel'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import PageHeader from '@/components/ui/PageHeader'
 import type { DashboardApi } from '@/api/dashboard.api'
 import { ApiError } from '@/api/httpClient'
 import type { NotificationsApi } from '@/api/notifications.api'
+import type { SupportMetricsApi } from '@/api/supportMetrics.api'
 import { useAuth } from '@/context/AuthContext'
 import { useAttentionAlerts, useTicketsDashboard } from '@/hooks/useDashboard'
 import { formatLongDate, greetingForHour } from '@/lib/dates'
@@ -24,11 +26,16 @@ import { strings } from '@/lib/strings'
 export default function DashboardPage({
   api,
   notificationsApi,
+  supportMetricsApi,
 }: {
   api?: DashboardApi
   notificationsApi?: NotificationsApi
+  supportMetricsApi?: SupportMetricsApi
 }) {
-  const { user, logout } = useAuth()
+  const { user, status, logout } = useAuth()
+  const metricsActorKey = status === 'authenticated' && user?.role === 'administrador'
+    ? user.id
+    : null
   const query = useTicketsDashboard(api)
   const dashboard = query.data
   const isStaff =
@@ -170,6 +177,14 @@ export default function DashboardPage({
           <AlertsPanel api={api} />
           <NotificationsCard api={notificationsApi} />
         </div>
+      ) : null}
+      {metricsActorKey !== null ? (
+        <SupportMetricsPanel
+          key={metricsActorKey}
+          actorKey={metricsActorKey}
+          api={supportMetricsApi}
+          onUnauthorized={logout}
+        />
       ) : null}
     </>
   )

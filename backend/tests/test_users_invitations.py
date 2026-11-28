@@ -224,9 +224,14 @@ def test_configured_postgres_lock_failure_aborts_acceptance_without_memory_mutat
     before = user.__dict__.copy()
     token = user.invitation_token
     monkeypatch.setenv("DATABASE_URL", "postgresql://configured")
+    # El test aísla el fallo del lock, no la lectura SQL previa del directorio.
+    # Mantiene el agregado original para comprobar que no se muta al abortar.
+    monkeypatch.setattr(get_user_repository(), "list_all", lambda: [user])
+    lock_attempts = []
 
     class BrokenConnection:
         def execute(self, *args, **kwargs):
+            lock_attempts.append(args)
             raise RuntimeError("lock failed")
 
     class Transaction:
@@ -245,6 +250,10 @@ def test_configured_postgres_lock_failure_aborts_acceptance_without_memory_mutat
 
     assert user.__dict__ == before
     assert transaction.exit_args[0] is RuntimeError
+    assert lock_attempts == [(
+        "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+        (f"identity:account:{user.id}",),
+    )]
 
 
 def test_configured_postgres_connection_failure_aborts_resend_without_memory_mutation(

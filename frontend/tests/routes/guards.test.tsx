@@ -19,6 +19,7 @@ import {
   buildTicketDashboard,
 } from '../helpers/dashboardFixtures'
 import type { AuthUser } from '@/types/domain'
+import { buildSupportMetrics } from '../helpers/supportMetricsFixtures'
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -50,6 +51,9 @@ function stubDashboardFetch(): void {
     }
     if (url.includes('/api/dashboard/sla')) {
       return jsonResponse(buildSlaDashboard())
+    }
+    if (url.includes('/api/dashboard/support-metrics')) {
+      return jsonResponse(buildSupportMetrics())
     }
     if (url.includes('/api/notifications/unread-count')) {
       return jsonResponse({ count: 0 })

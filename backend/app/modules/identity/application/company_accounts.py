@@ -8,6 +8,7 @@ se resuelve desde la cuenta en cada peticion (RF-134).
 from __future__ import annotations
 
 from app.modules.identity.domain.entities import User
+from app.modules.identity.application.users import _account_change
 from app.modules.identity.infrastructure.user_repository import (
     InMemoryUserRepository,
 )
@@ -45,18 +46,15 @@ def associate_account(
     if user is None:
         raise AccountAssociationNotFoundError("not found")
 
-    if company_status != "active":
-        raise AccountAssociationNotAllowedError("asociación no permitida")
-    if user.company_id is not None:
-        raise AccountAssociationNotAllowedError("asociación no permitida")
-    if user.role == "administrador":
-        raise AccountAssociationNotAllowedError("asociación no permitida")
-    if actor_id is not None and user.id == actor_id:
-        raise AccountAssociationNotAllowedError("asociación no permitida")
-
-    user.company_id = company_id
-    if conn is not None:
-        users.sync_persistent(user, conn)
-    else:
-        users.sync_persistent(user)
+    with _account_change(user, users, conn) as active:
+        if company_status != "active":
+            raise AccountAssociationNotAllowedError("asociación no permitida")
+        if user.company_id is not None:
+            raise AccountAssociationNotAllowedError("asociación no permitida")
+        if user.role == "administrador":
+            raise AccountAssociationNotAllowedError("asociación no permitida")
+        if actor_id is not None and user.id == actor_id:
+            raise AccountAssociationNotAllowedError("asociación no permitida")
+        user.company_id = company_id
+        users.sync_persistent(user, active)
     return user

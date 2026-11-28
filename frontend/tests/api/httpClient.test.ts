@@ -19,6 +19,13 @@ function jsonResponse(body: unknown, status = 200): Response {
   })
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
@@ -77,6 +84,79 @@ describe('httpClient', () => {
       detail: 'sesión inválida',
     })
     expect(onUnauthorized).toHaveBeenCalledTimes(1)
+  })
+
+  it('conserva la notificación de un 401 vigente con señal activa', async () => {
+    mockFetch(jsonResponse({ detail: 'sesión inválida' }, 401))
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const controller = new AbortController()
+    await expect(request('/api/test', { signal: controller.signal })).rejects.toMatchObject({
+      status: 401, detail: 'sesión inválida',
+    })
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+    expect(controller.signal.aborted).toBe(false)
+  })
+
+  it('no notifica un 401 recibido después de cancelar, pero conserva el rechazo HTTP', async () => {
+    const response = deferred<Response>()
+    const fetchMock = vi.fn<typeof fetch>(() => response.promise)
+    vi.stubGlobal('fetch', fetchMock)
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const controller = new AbortController()
+    const pending = request('/api/test', { signal: controller.signal })
+    controller.abort()
+    // El doble ignora la cancelación para comprobar también la respuesta tardía.
+    response.resolve(jsonResponse({ detail: 'sesión anterior' }, 401))
+    await expect(pending).rejects.toMatchObject({ status: 401, detail: 'sesión anterior' })
+    expect(fetchMock.mock.calls[0][1]?.signal).toBe(controller.signal)
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it.each(['detail', 'abort'])('no notifica 401 cancelado durante la lectura del cuerpo (%s)', async (result) => {
+    const body = deferred<unknown>()
+    const response = jsonResponse({}, 401)
+    const readBody = vi.spyOn(response, 'json').mockImplementation(() => body.promise)
+    mockFetch(response)
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const controller = new AbortController()
+    const pending = request('/api/test', { signal: controller.signal })
+    // fetch se resuelve antes de cancelar: la petición ya está leyendo json().
+    await Promise.resolve()
+    expect(readBody).toHaveBeenCalledTimes(1)
+    controller.abort()
+    if (result === 'abort') body.reject(new DOMException('Aborted', 'AbortError'))
+    else body.resolve({ detail: 'sesión anterior' })
+    await expect(pending).rejects.toMatchObject({
+      status: 401,
+      detail: result === 'abort' ? 'Ocurrió un error inesperado' : 'sesión anterior',
+    })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it.each([404, 500])('conserva el error HTTP %i incluso con señal cancelada', async (status) => {
+    mockFetch(jsonResponse({ detail: 'error original' }, status))
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const controller = new AbortController()
+    controller.abort()
+    await expect(request('/api/test', { signal: controller.signal })).rejects.toMatchObject({
+      status, detail: 'error original',
+    })
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('propaga el AbortError de fetch sin notificar sesión expirada', async () => {
+    const error = new DOMException('Aborted', 'AbortError')
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(error))
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const controller = new AbortController()
+    controller.abort()
+    await expect(request('/api/test', { signal: controller.signal })).rejects.toBe(error)
+    expect(onUnauthorized).not.toHaveBeenCalled()
   })
 
   it('normaliza un detalle de validación en lista', async () => {

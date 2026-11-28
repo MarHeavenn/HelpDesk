@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
+from contextlib import contextmanager
 
 from app.modules.companies.interface.company_status_contract import (
     get_company_status,
@@ -36,6 +37,26 @@ class InactiveCompanyError(ValueError):
 
 class LastActiveAdministratorError(ValueError):
     """La operacion dejaria la empresa sin administrador activo."""
+
+
+@contextmanager
+def _account_change(user: User, users: InMemoryUserRepository, conn=None):
+    """Relee bajo lock y compensa también fallos al confirmar el contexto."""
+    before = user.__dict__.copy()
+    transaction = (
+        _invitation_lock(user.id, users) if conn is None
+        else users.locked_account(user.id, conn)
+    )
+    try:
+        with transaction as active:
+            if active:
+                persisted = users.load_persistent_for_update(user.id, active)
+                if persisted is not None:
+                    users.copy_state(user, persisted)
+            yield active
+    except BaseException:
+        users.restore_state(user, before)
+        raise
 
 
 def visible_user(user: User, company_id: str | None) -> bool:
@@ -102,10 +123,20 @@ def create_user(
         invitation_status="pending",
     )
     try:
-        users.add(user, conn)
+        transaction = (
+            _invitation_lock(user.id, users) if conn is None
+            else users.locked_account(user.id, conn)
+        )
+        with transaction as active:
+            users.add(user, active)
+            issue_invitation(user, users, active)
     except EmailAlreadyStoredError as exc:
+        users.remove(user.id)
         raise UserEmailConflictError("correo no disponible") from exc
-    issue_invitation(user, users, conn)
+    except BaseException:
+        # SQL revierte por el contexto; el seam no debe retener un alta a medias.
+        users.remove(user.id)
+        raise
     return user
 
 
@@ -118,77 +149,62 @@ def update_user(
     if not changes:
         raise UserManagementValidationError("at least one field is required")
     try:
-        clean_name = validate_name(changes["name"]) if "name" in changes else user.name
-        clean_email = EmailValidator().validate(changes["email"]) if "email" in changes else user.email
+        clean_name = validate_name(changes["name"]) if "name" in changes else None
+        clean_email = EmailValidator().validate(changes["email"]) if "email" in changes else None
     except ValueError as exc:
         raise UserManagementValidationError(str(exc)) from exc
-    phone = changes["phone"] if "phone" in changes else user.phone
-    email_changed = clean_email != user.email
-    if email_changed and users.find_by_email(clean_email) not in (None, user):
-        raise UserEmailConflictError("correo no disponible")
-    with _invitation_lock(user.id, users) as conn:
-        if conn:
-            persisted = users.load_persistent_for_update(user.id, conn)
-            if persisted is not None:
-                users.copy_state(user, persisted)
-        user.name = clean_name
-        user.phone = phone
-        if email_changed:
-            try:
+    try:
+        with _account_change(user, users) as conn:
+            email_changed = clean_email is not None and clean_email != user.email
+            if email_changed:
+                existing = users.find_by_email(clean_email)
+                if existing is not None and existing.id != user.id:
+                    raise UserEmailConflictError("correo no disponible")
+            if "name" in changes:
+                user.name = clean_name
+            if "phone" in changes:
+                user.phone = changes["phone"]
+            if email_changed:
                 users.update_email(user, clean_email)
-            except EmailAlreadyStoredError as exc:
-                raise UserEmailConflictError("correo no disponible") from exc
-            if user.invitation_status == "pending":
-                try:
+                if user.invitation_status == "pending":
                     issue_invitation(user, users, conn)
-                except EmailAlreadyStoredError as exc:
-                    raise UserEmailConflictError("correo no disponible") from exc
+            users.sync_persistent(user, conn)
+    except EmailAlreadyStoredError as exc:
+        raise UserEmailConflictError("correo no disponible") from exc
     return user, ("not-attempted" if email_changed and user.invitation_status == "pending" else None)
 
 
 def change_user_role(user: User, role: str, users: InMemoryUserRepository) -> User:
     if role not in ALLOWED_ROLES:
         raise UserManagementValidationError("role is invalid")
-    with users.lock:
+    with _account_change(user, users) as conn:
         if user.role == "administrador" or role == "administrador":
             try:
-                users.commit_admin_mutation(user, new_role=role)
+                users.commit_admin_mutation(user, new_role=role, conn=conn)
             except LastActiveAdministratorPersistenceError as exc:
                 raise LastActiveAdministratorError(str(exc)) from exc
         user.role = role
+        users.sync_persistent(user, conn)
     return user
 
 
 def change_user_status(user: User, status: str, users: InMemoryUserRepository) -> User:
     if status not in {"active", "deactivated"}:
         raise UserManagementValidationError("status is invalid")
-    before = user.__dict__.copy()
-    try:
-        with _invitation_lock(user.id, users) as conn:
-            if conn:
-                persisted = users.load_persistent_for_update(user.id, conn)
-                if persisted is not None:
-                    users.copy_state(user, persisted)
-            if user.status == status:
-                return user
-            if user.role == "administrador":
-                try:
-                    users.commit_admin_mutation(user, new_status=status, conn=conn)
-                except LastActiveAdministratorPersistenceError as exc:
-                    raise LastActiveAdministratorError(str(exc)) from exc
-            user.status = status
-            if status == "deactivated":
-                user.invitation_status = "accepted" if user.invitation_status == "accepted" else user.invitation_status
-                if user.invitation_status == "pending":
-                    user.invitation_token_hash = None
-                    user.invitation_expires_at = None
-                    user.invitation_token = None
-            if conn:
-                users.sync_persistent(user, conn)
-    except BaseException:
-        user.__dict__.clear()
-        user.__dict__.update(before)
-        raise
+    with _account_change(user, users) as conn:
+        if user.status == status:
+            return user
+        if user.role == "administrador":
+            try:
+                users.commit_admin_mutation(user, new_status=status, conn=conn)
+            except LastActiveAdministratorPersistenceError as exc:
+                raise LastActiveAdministratorError(str(exc)) from exc
+        user.status = status
+        if status == "deactivated" and user.invitation_status == "pending":
+            user.invitation_token_hash = None
+            user.invitation_expires_at = None
+            user.invitation_token = None
+        users.sync_persistent(user, conn)
     return user
 
 

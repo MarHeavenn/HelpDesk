@@ -76,7 +76,8 @@ export async function request<T>(
 
   if (!response.ok) {
     const detail = await readErrorDetail(response)
-    if (response.status === 401) unauthorizedHandler?.()
+    // El cuerpo pudo quedar pendiente mientras se cancelaba la sesión anterior.
+    if (response.status === 401 && !options.signal?.aborted) unauthorizedHandler?.()
     throw new ApiError(response.status, detail)
   }
 

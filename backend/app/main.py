@@ -27,6 +27,9 @@ from app.modules.tickets.interface.dashboard_router import (
 from app.modules.tickets.interface.history_router import (
     router as history_router,
 )
+from app.modules.tickets.interface.metrics_router import (
+    router as support_metrics_router,
+)
 from app.modules.tickets.interface.notifications_router import (
     router as notifications_router,
 )
@@ -93,6 +96,7 @@ app.include_router(notifications_router)
 app.include_router(sla_router)
 app.include_router(sla_dashboard_router)
 app.include_router(tickets_dashboard_router)
+app.include_router(support_metrics_router)
 
 
 @app.get("/health")

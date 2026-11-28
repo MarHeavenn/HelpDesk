@@ -65,4 +65,4 @@ Detalle en las secciones 3.3 y 4 del documento general.
   publicación en GHCR y despliegue en Render free (20 días) preparados; crear la
   cuenta/configurar secretos y verificar ejecución real pendiente.
 - HU-17 (búsqueda y filtrado de tickets): ver `specs/features/HU-17-ticket-search-filtering/` (implementada; RF-165–RF-178; validación con límites de entorno en `tasks.md`). Sus identificadores RF-165–RF-172 coinciden con los de HU-26: citar siempre la HU junto al RF; esta integración no renumera requisitos aprobados.
-- HU-18: definida en el documento general (secciones 2 y 4); carpeta aún no creada.
+- HU-18 (métricas de gestión de soporte): ver `specs/features/HU-18-support-management-metrics/` (spec/plan/tareas aprobados explícitamente; T1–T10 completadas; RF-179–RF-191). Todo el historial autorizado; SLA solo de finalizados evaluables con objetivo conservado, sin fallback de política vigente. Matriz RF y G/F verdes en `plan.md`/`tasks.md`; cierre documental con límites manuales/SQL explícitos. Pendiente revisión independiente final, navegador con datos reales y PostgreSQL autorizado; no se declara la spec validada.

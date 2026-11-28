@@ -14,6 +14,11 @@ import {
 import { createNotificationsApi } from '../helpers/notificationFixtures'
 import type { NotificationsApi } from '@/api/notifications.api'
 import type { TicketDashboard } from '@/types/dashboard'
+import { buildSupportMetrics } from '../helpers/supportMetricsFixtures'
+
+function supportMetricsApi() {
+  return { getMetrics: vi.fn(async () => buildSupportMetrics()) }
+}
 
 function emptyNotifications(): NotificationsApi {
   return createNotificationsApi({
@@ -27,7 +32,7 @@ function renderPage(
   notificationsApi: NotificationsApi = emptyNotifications(),
 ) {
   return renderApp(
-    <DashboardPage api={api} notificationsApi={notificationsApi} />,
+    <DashboardPage api={api} notificationsApi={notificationsApi} supportMetricsApi={supportMetricsApi()} />,
     { user: ADMIN },
   )
 }
@@ -37,7 +42,7 @@ describe('DashboardPage', () => {
     renderPage()
 
     expect(
-      await screen.findByRole('article', { name: 'Total de tickets' }),
+      (await screen.findByText('Total de tickets', { selector: 'article > p' })).closest('article'),
     ).toHaveTextContent('6')
     expect(
       screen.getByRole('article', { name: 'Abiertos' }),
@@ -46,7 +51,7 @@ describe('DashboardPage', () => {
       screen.getByRole('article', { name: 'En atención' }),
     ).toHaveTextContent('4')
     expect(
-      screen.getByRole('article', { name: 'Resueltos' }),
+      screen.getByText('Resueltos', { selector: 'article > p' }).closest('article'),
     ).toHaveTextContent('1')
 
     const status = screen.getByRole('region', {
@@ -135,7 +140,7 @@ describe('DashboardPage', () => {
       await screen.findByRole('status', { name: 'Cargando dashboard' }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('article', { name: 'Total de tickets' }),
+      screen.queryByText('Total de tickets', { selector: 'article > p' }),
     ).not.toBeInTheDocument()
   })
 
@@ -190,7 +195,7 @@ describe('DashboardPage', () => {
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))
 
     expect(
-      await screen.findByRole('article', { name: 'Total de tickets' }),
+      (await screen.findByText('Total de tickets', { selector: 'article > p' })).closest('article'),
     ).toHaveTextContent('6')
     expect(getTickets).toHaveBeenCalledTimes(2)
   })
@@ -204,7 +209,7 @@ describe('DashboardPage', () => {
     const logout = vi.fn(async () => undefined)
 
     renderApp(
-      <DashboardPage api={api} notificationsApi={emptyNotifications()} />,
+      <DashboardPage api={api} notificationsApi={emptyNotifications()} supportMetricsApi={supportMetricsApi()} />,
       {
         user: ADMIN,
         api: createAuthApi(ADMIN, { logout }),
@@ -289,7 +294,7 @@ describe('DashboardPage', () => {
     const logout = vi.fn(async () => undefined)
 
     renderApp(
-      <DashboardPage api={api} notificationsApi={emptyNotifications()} />,
+      <DashboardPage api={api} notificationsApi={emptyNotifications()} supportMetricsApi={supportMetricsApi()} />,
       {
         user: ADMIN,
         api: createAuthApi(ADMIN, { logout }),

@@ -132,6 +132,25 @@ def _invitation_lock(account_id: str, users: InMemoryUserRepository) -> Iterator
         transaction.__exit__(None, None, None)
 
 
+@contextmanager
+def _invitation_change(user: User, users: InMemoryUserRepository):
+    """Compensa bajo el lock; el commit SQL también queda dentro del memento."""
+    before = None
+    try:
+        with _invitation_lock(user.id, users) as conn:
+            before = user.__dict__.copy()
+            try:
+                yield conn
+            except BaseException:
+                users.restore_state(user, before)
+                before = None
+                raise
+    except BaseException:
+        if before is not None:
+            users.restore_state(user, before)
+        raise
+
+
 def accept_invitation(
     token: str, password: str, users: InMemoryUserRepository
 ) -> User:
@@ -151,23 +170,14 @@ def accept_invitation(
             account_id = None
         if account_id is not None:
             candidate = users.find_by_id(account_id)
-            if candidate is None:
-                candidate = User(
-                    id=account_id, name="", email="", password_hash=None,
-                    role="cliente",
-                )
     if candidate is None:
         raise InvitationNotFoundError("invitation not found")
-    with _invitation_lock(candidate.id, users) as conn:
-        # Re-read after acquiring the account lock. A concurrent rotation,
-        # acceptance or deactivation may have invalidated the token.
-        user = users.load_persistent_for_update(candidate.id, conn) if conn else None
-        if user is None:
-            user = next(
-                (candidate for candidate in users.list_all()
-                 if candidate.invitation_token_hash == token_hash),
-                None,
-            )
+    with _invitation_change(candidate, users) as conn:
+        # Sin fallback local si falta la fila canónica bajo el lock.
+        user = users.load_persistent_for_update(candidate.id, conn) if conn else next(
+            (current for current in users.list_all()
+             if current.invitation_token_hash == token_hash), None
+        )
         now = datetime.now(timezone.utc)
         if (
             user is None
@@ -176,65 +186,35 @@ def accept_invitation(
             or user.invitation_used_at is not None
             or user.invitation_expires_at is None
             or now >= user.invitation_expires_at
+            or user.invitation_token_hash != token_hash
         ):
             raise InvitationNotFoundError("invitation not found")
-        # RF-136: la aceptación de una invitación de una empresa inactiva
-        # responde el mismo 404 uniforme que un token inválido, sin consumir
-        # el token ni establecer contraseña, y antes de validar la contraseña
-        # (RF-137). RF-139: solo bloquea el estado exactamente `inactive`; un
-        # estado `None` (empresa heredada sin fila en `companies`, como
-        # `company_id="c1"` en fixtures de HU-13) NO bloquea.
+        # Empresa inactiva/token inválido preceden a validar contraseña.
+        # None conserva la compatibilidad heredada de HU-19 (RF-139).
         if get_company_status(user.company_id) == "inactive":
             raise InvitationNotFoundError("invitation not found")
-        # Keep the repository's aggregate instance coherent for callers that
-        # retain it (the durable row remains the source of truth).
-        local_candidate = candidate
         try:
             clean_password = validate_password(password)
         except ValueError as exc:
             raise InvitationValidationError(str(exc)) from exc
-        password_hash = Argon2PasswordHasher().hash(clean_password)
-        # Re-check immediately before the in-memory aggregate mutation. With
-        # PostgreSQL this is protected by the transaction lock above; without
-        # PostgreSQL the short compare-and-consume sequence remains atomic in
-        # the supported single-process fallback.
-        if (
-            user.status != "active"
-            or user.invitation_status != "pending"
-            or user.invitation_used_at is not None
-            or user.invitation_token_hash != token_hash
-        ):
-            raise InvitationNotFoundError("invitation not found")
-        local_before = local_candidate.__dict__.copy()
-        try:
-            user.password_hash = password_hash
-            user.invitation_status = "accepted"
-            user.invitation_used_at = now
-            user.invitation_token_hash = None
-            user.invitation_expires_at = None
-            user.invitation_token = None
-            if conn:
-                users.sync_persistent(user, conn)
-            users.copy_state(local_candidate, user)
-        except BaseException:
-            local_candidate.__dict__.clear()
-            local_candidate.__dict__.update(local_before)
-            raise
-        return local_candidate
+        user.password_hash = Argon2PasswordHasher().hash(clean_password)
+        user.invitation_status = "accepted"
+        user.invitation_used_at = now
+        user.invitation_token_hash = None
+        user.invitation_expires_at = None
+        user.invitation_token = None
+        users.sync_persistent(user, conn)
+        users.copy_state(candidate, user)
+    return candidate
 
 
 def resend_invitation(user: User, users: InMemoryUserRepository) -> str:
-    before = user.__dict__.copy()
-    try:
-        with _invitation_lock(user.id, users) as conn:
-            if conn:
-                persisted = users.load_persistent_for_update(user.id, conn)
-                if persisted is not None:
-                    users.copy_state(user, persisted)
-            if user.status != "active" or user.invitation_status != "pending":
+    with _invitation_change(user, users) as conn:
+        if conn:
+            persisted = users.load_persistent_for_update(user.id, conn)
+            if persisted is None:
                 raise InvitationNotResendableError("invitation is not resendable")
-            return issue_invitation(user, users, conn)
-    except BaseException:
-        user.__dict__.clear()
-        user.__dict__.update(before)
-        raise
+            users.copy_state(user, persisted)
+        if user.status != "active" or user.invitation_status != "pending":
+            raise InvitationNotResendableError("invitation is not resendable")
+        return issue_invitation(user, users, conn)

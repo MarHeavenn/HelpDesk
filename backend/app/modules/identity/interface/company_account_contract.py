@@ -223,10 +223,9 @@ def account_email_exists(
 ) -> bool:
     """Indica si ya existe una cuenta con ese correo (RF-135/RF-141)."""
     repository = users if users is not None else get_user_repository()
-    try:
-        return repository.find_by_email(email) is not None
-    except Exception:  # noqa: BLE001 - defensivo ante correo mal formado
-        return False
+    # El repositorio ya trata los correos mal formados como ausentes.
+    # Los fallos SQL no equivalen a un correo disponible.
+    return repository.find_by_email(email) is not None
 
 
 def resend_company_administrator_invitation(

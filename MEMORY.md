@@ -3,8 +3,9 @@
 - HU-01..HU-14, HU-19, HU-21..HU-24 integradas en `develop`; HU-15 implementada y HU-16 en cierre de validación.
 - HU-26/CI/CD integradas: Docker/nginx, Actions/GHCR, Render demo 20 días; PostgreSQL free 30 días (crear al inicio). CI `45263461824` verde.
 - Rama `feature/HU-18-support-management-metrics`, desde `develop` `0263108` (2026-11-25); cambios locales preservados.
-- Usuario autorizó entregar HU-18 + HU-26 A/B.I juntos y hacer push a esta rama;
-  excluir configuración local `.opencode/` y `.agents/`. B.II–E siguen pendientes.
+- Usuario autorizó entregar HU-18 + HU-26 A/B.I juntos; commit `e3b1648` subido.
+  Después autorizó incluir agentes (también `coordinator-classic`), configuración
+  OpenCode y skill `complexity-classifier` en la misma rama. B.II–E siguen pendientes.
 - HU-18: T1–T10 y QA aprobados (RF-179–191); panel admin por ID, actorKey/guardia
   401; manual navegador pendiente. Frontend 461/43, lint/build y grafos verdes.
 - HU-17 hecha (RF-165–178): solicitante mínimo, filtro SLA y aislamiento de cuatro listados; docs consolidados, PostgreSQL limitado.
